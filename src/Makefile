@@ -100,6 +100,11 @@ chatbot: bool_router mem_int boolnet tsetlin
 		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] release/chatbot.exe built"
 
+# ---- Cascade Tree Chatbot (standalone) ----
+chatbot_cascade:
+	gcc -std=c99 -O2 -o ../release/chatbot_cascade.exe ../release/chatbot_cascade.c -lm
+	@echo "[OK] chatbot_cascade.exe built"
+
 clean:
 	rm -f mem_int/*.o mem_part/*.o bool_router/*.o conv1d_circular/*.o upsampling/*.o boolnet/*.o tsetlin_train/*.o
 	rm -f ../build/*.exe
