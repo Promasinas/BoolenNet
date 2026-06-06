@@ -12,6 +12,7 @@
 | v0.6 | `v0.6-simple-llm` | Simple LLM | 5对 | 1/5 | Router+Memory | |
 | v0.7 | `v0.7-llm-classify` | **分类对话** | 16 tokens | **100%** | one-hot+树+XOR | ⭐ |
 | v0.8 | `v0.8-boolchat-v3v4` | 纠错编码实验 | 16 | 0/16 | 暴力搜索 | 研究用 |
+| v0.9 | `v0.9-boolchat-200` | **Byte流对话(200)** | 200 | **100%** | CoordDescent+XOR | ⭐ |
 
 ## 推荐使用
 
@@ -24,6 +25,9 @@ release/v0.4-boolchat/boolchat.exe
 
 # 分类对话 16 tokens
 release/v0.7-llm-classify/llm_classify.exe
+
+# Byte流 200 Q&A (最大规模, 100%准确)
+release/v0.9-boolchat-200/boolchat200.exe
 ```
 
 ## 关键里程碑
