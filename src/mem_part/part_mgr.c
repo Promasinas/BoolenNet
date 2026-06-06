@@ -1,6 +1,7 @@
 /**
  * part_mgr.c — Partition Activation Manager implementation
  */
+#include <stdio.h>
 #include <string.h>
 #include "part_mgr.h"
 #include "partition.h"

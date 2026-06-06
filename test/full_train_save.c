@@ -88,7 +88,7 @@ int main(void)
 
     MemIntLayer *m2 = mem_int_create(5, ML_PRECISION_UINT8, N_CELLS, 255, 0);
     boolnet_add_layer(net, LAYER_MEMORY, 5, m2,
-        mem_int_forward_output, (int(*)(void*,const char*))mem_int_save);
+        mem_int_forward_layer, (int(*)(void*,const char*))mem_int_save);
 
     printf("Network: Router→Conv1D(bool)→Mem→Router→Mem(output)\n");
     printf("Trainable: Router1(32b) + Conv1D(3b) + Router2(32b) = 67 bits\n\n");
@@ -118,7 +118,7 @@ int main(void)
         if ((s+1) % 5000 == 0) {
             int a = eval(net, in, tg);
             uint32_t st,ac; int32_t br;
-            tsetlin_get_stats(t, &st, &ac, &br);
+            { uint32_t _ep; int32_t _bv; tsetlin_get_stats(t, &st, &ac, &br, &_ep, &_bv); }
             printf("  Step %5d: acc=%d/%d  ok=%u  best_r=%d\n", s+1, a, N_PATS, ac, br);
             if (a > best_acc) { best_acc = a; best_step = s+1; }
         }

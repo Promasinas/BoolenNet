@@ -65,5 +65,12 @@ train_tests: all
 		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] train_test.exe + boolnet_train.exe built"
 
+# ---- Full Train → Save → Load → Infer ----
+full_train: all
+	$(CC) $(CFLAGS) -I. -o ../test/full_train_save.exe ../test/full_train_save.c \
+		bool_router/bool_router.o conv1d_circular/conv1d_circular.o \
+		mem_int/mem_int_layer.o boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
+	@echo "[OK] full_train_save.exe built"
+
 clean:
 	rm -f mem_int/*.o mem_part/*.o bool_router/*.o conv1d_circular/*.o upsampling/*.o boolnet/*.o tsetlin_train/*.o ../test/llm_network_test.exe
