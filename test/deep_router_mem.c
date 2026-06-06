@@ -34,8 +34,8 @@ int main(void)
     srand((unsigned)time(NULL));
     printf("╔══════════════════════════════════════════╗\n");
     printf("║  Deep Router→Memory Cascade             ║\n");
-    printf("║  %d alternating pairs (%d layers)       ║\n", N_PAIRS, N_PAIRS*2);
-    printf("║  Trainable: %d router bits             ║\n", N_PAIRS * 128);
+    printf("║  %d Router→Memory pairs (%d layers)    ║\n", N_PAIRS, N_PAIRS*2);
+    printf("║  Trainable: %d router bits             ║\n", N_PAIRS * N_BYTES * 8);
     printf("╚══════════════════════════════════════════╝\n\n");
 
     /* Build: N_PAIRS × (Router → Memory) */
