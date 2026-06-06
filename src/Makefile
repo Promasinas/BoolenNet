@@ -47,5 +47,13 @@ boolnet:
 tsetlin: boolnet
 	$(CC) $(CFLAGS) -c -o tsetlin_train/tsetlin_train.o tsetlin_train/tsetlin_train.c
 
+# ---- LLM Network Integration Test ----
+llm_test: all
+	$(CC) $(CFLAGS) -I. -o ../test/llm_network_test.exe ../test/llm_network_test.c \
+		bool_router/bool_router.o conv1d_circular/conv1d_circular.o \
+		upsampling/upsampling.o mem_int/mem_int_layer.o \
+		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
+	@echo "[OK] llm_network_test.exe built"
+
 clean:
-	rm -f mem_int/*.o mem_part/*.o conv1d_circular/*.o upsampling/*.o boolnet/*.o tsetlin_train/*.o
+	rm -f mem_int/*.o mem_part/*.o bool_router/*.o conv1d_circular/*.o upsampling/*.o boolnet/*.o tsetlin_train/*.o ../test/llm_network_test.exe

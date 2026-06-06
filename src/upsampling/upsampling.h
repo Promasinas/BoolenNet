@@ -9,12 +9,12 @@
 #include <stdint.h>
 #include "../common/boolnet_common.h"
 
-typedef struct { uint32_t length; uint8_t *bits; } BoolRouter;
+typedef struct { uint32_t length; uint8_t *bits; } UpsampleRouter;
 
 typedef struct {
-    LayerUID    uid;
-    uint32_t    num_routers, input_length;
-    BoolRouter *routers;
+    LayerUID       uid;
+    uint32_t       num_routers, input_length;
+    UpsampleRouter *routers;
 } UpsampleLayer;
 
 UpsampleLayer* upsample_create(LayerUID uid, uint32_t M, uint32_t N);

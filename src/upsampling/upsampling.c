@@ -7,7 +7,7 @@ UpsampleLayer* upsample_create(LayerUID uid, uint32_t M, uint32_t N) {
     UpsampleLayer *u = (UpsampleLayer*)calloc(1, sizeof(UpsampleLayer));
     if (!u) return NULL;
     u->uid = uid; u->num_routers = M; u->input_length = N;
-    u->routers = (BoolRouter*)calloc(M, sizeof(BoolRouter));
+    u->routers = (UpsampleRouter*)calloc(M, sizeof(UpsampleRouter));
     if (!u->routers) { free(u); return NULL; }
     for (uint32_t i = 0; i < M; i++) {
         u->routers[i].length = N;
