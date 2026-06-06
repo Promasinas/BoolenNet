@@ -112,15 +112,11 @@ int main(void)
 
     int best = a0;
     for (int s = 0; s < STEPS; s++) {
-        int seq_idx = s % N_SEQ;
-        /* For sequential training: feed tokens, compute reward on final output */
-        uint8_t out[N_CELLS];
-        seq_forward(net, seqs[seq_idx], out);
-        /* Manual reward + flip check... Actually, tsetlin_train_step does the whole thing.
-         * But it does a SINGLE forward. For sequential, we need custom training. */
-        int rc = tsetlin_train_step(t, seqs[seq_idx][0], targets[seq_idx]);
-        /* NOTE: This only trains on first token. For proper sequential training,
-         * we need a different approach. This is a simplified test. */
+        int si = s % N_SEQ;
+        /* Sequential training: feed all tokens in sequence, compare final output */
+        const uint8_t *tok_ptrs[SEQ_LEN];
+        for (int t = 0; t < SEQ_LEN; t++) tok_ptrs[t] = seqs[si][t];
+        int rc = tsetlin_train_seq(t, tok_ptrs, SEQ_LEN, targets[si]);
 
         if (rc == -2) { printf("Stop@%d\n", s+1); break; }
         if ((s+1) % 3000 == 0) {

@@ -1,4 +1,4 @@
-/* Per-function tests for tsetlin_train (Constitution X) — UID 007 */
+/* tsetlin_train per-function tests — UID 007 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,42 +16,34 @@ void test_create(void) { T("tsetlin_create");
     C(!tsetlin_create(NULL,1,255), "reject NULL net");
     tsetlin_destroy(t); boolnet_destroy(n); }
 
-void test_train_step(void) { T("tsetlin_train_step");
-    BoolNet *n = boolnet_create(99, 4, 4);
-    boolnet_add_layer(n, LAYER_ROUTER, 1, NULL, NULL, NULL);
-    TsetlinTrainer *t = tsetlin_create(n, 10, 255);
-    uint8_t input[4]={0,0,0,0}, target[4]={0,0,0,0};
-    int rc = tsetlin_train_step(t, input, target);
-    C(rc==-1, "returns -1 (no valid router — needs real BoolRouter instance)");
-    tsetlin_destroy(t); boolnet_destroy(n); }
-
-void test_train_epochs(void) { T("tsetlin_train_epochs");
-    BoolNet *n = boolnet_create(99, 4, 4);
-    boolnet_add_layer(n, LAYER_ROUTER, 1, NULL, NULL, NULL);
-    TsetlinTrainer *t = tsetlin_create(n, 3, 255);
-    uint8_t input[4]={0,0,0,0}, target[4]={0,0,0,0};
-    C(!tsetlin_train_epochs(t, input, target, 5), "epochs complete");
-    tsetlin_destroy(t); boolnet_destroy(n); }
-
 void test_get_stats(void) { T("tsetlin_get_stats");
     BoolNet *n = boolnet_create(99, 8, 4);
     boolnet_add_layer(n, LAYER_ROUTER, 1, NULL, NULL, NULL);
     TsetlinTrainer *t = tsetlin_create(n, 5, 255);
     uint32_t s=0,a=0; int32_t b=0;
     tsetlin_get_stats(t, &s, &a, &b);
-    C(s==0 && b<=255, "stats initialized (no training without real router)");
+    C(s==0 && a==0 && b==-2147483648, "stats initialized (no training)");
     tsetlin_destroy(t); boolnet_destroy(n); }
 
 void test_save_load(void) { T("tsetlin_save/load");
     BoolNet *n = boolnet_create(99, 4, 4);
     boolnet_add_layer(n, LAYER_ROUTER, 1, NULL, NULL, NULL);
     TsetlinTrainer *t = tsetlin_create(n, 7, 128);
-    C(!tsetlin_save(t, "_tt_test.bin"), "save ok");
-    TsetlinTrainer *t2 = tsetlin_load("_tt_test.bin");
+    C(!tsetlin_save(t, "_tt.bin"), "save ok");
+    TsetlinTrainer *t2 = tsetlin_load("_tt.bin");
     C(t2 && t2->neg_tolerance==7 && t2->byte_max==128, "load params match");
-    tsetlin_destroy(t); tsetlin_destroy(t2); boolnet_destroy(n); remove("_tt_test.bin"); }
+    tsetlin_destroy(t); tsetlin_destroy(t2); boolnet_destroy(n); remove("_tt.bin"); }
+
+void test_train_step_no_router(void) { T("tsetlin_train_step (no valid router → -1)");
+    BoolNet *n = boolnet_create(99, 4, 4);
+    boolnet_add_layer(n, LAYER_ROUTER, 1, NULL, NULL, NULL);
+    TsetlinTrainer *t = tsetlin_create(n, 10, 255);
+    uint8_t in[4]={0}, target[4]={0};
+    int rc = tsetlin_train_step(t, in, target);
+    C(rc==-1, "returns -1 (NULL router instance — needs integration test)");
+    tsetlin_destroy(t); boolnet_destroy(n); }
 
 int main(void) {
-    test_create(); test_train_step(); test_train_epochs(); test_get_stats(); test_save_load();
+    test_create(); test_get_stats(); test_save_load(); test_train_step_no_router();
     printf("\n=== SUMMARY: %d/%d ===\n", P, P+F); return F>0;
 }

@@ -28,7 +28,7 @@
 /* ---- Network Builder ---- */
 static BoolNet* build_network(void)
 {
-    BoolNet *net = boolnet_create(1, IN_BYTES, 4);
+    BoolNet *net = boolnet_create(1, N_BYTES, 4);
 
     /* Layer 1: Router (8 bit) — learns input routing */
     uint8_t r1_bits[1] = {0x00};
@@ -56,7 +56,7 @@ static BoolNet* build_network(void)
 }
 
 /* ---- Evaluate accuracy on all patterns ---- */
-static int evaluate(BoolNet *net, uint8_t inputs[N_PATTERNS][IN_BYTES],
+static int evaluate(BoolNet *net, uint8_t inputs[N_PATTERNS][N_BYTES],
                     uint8_t targets[N_PATTERNS][N_CELLS])
 {
     int correct = 0;
@@ -86,7 +86,7 @@ int main(void)
 
     /* ---- Training Data ---- */
     /* 4 input patterns (8-bit each), 4 one-hot output targets */
-    uint8_t inputs[N_PATTERNS][IN_BYTES] = {
+    uint8_t inputs[N_PATTERNS][N_BYTES] = {
         {0x01},  /* bit 0: pattern A */
         {0x02},  /* bit 1: pattern B */
         {0x04},  /* bit 2: pattern C */

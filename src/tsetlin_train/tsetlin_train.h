@@ -22,6 +22,8 @@ typedef struct {
 TsetlinTrainer* tsetlin_create(BoolNet *net, uint32_t neg_tol, uint32_t byte_max);
 void            tsetlin_destroy(TsetlinTrainer *t);
 int             tsetlin_train_step(TsetlinTrainer *t, const uint8_t *input, const uint8_t *target);
+int             tsetlin_train_seq(TsetlinTrainer *t, const uint8_t **tokens, uint32_t seq_len,
+                                  const uint8_t *target);
 int             tsetlin_train_epochs(TsetlinTrainer *t, const uint8_t *input, const uint8_t *target, uint32_t max_epochs);
 void            tsetlin_get_stats(const TsetlinTrainer *t, uint32_t *steps, uint32_t *accepted, int32_t *best_r);
 int             tsetlin_save(const TsetlinTrainer *t, const char *path);
