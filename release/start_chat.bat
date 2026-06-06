@@ -1,14 +1,15 @@
 @echo off
 chcp 65001 >nul 2>&1
-title BoolNet Byte-Stream Chatbot
+title BoolNet Chatbot
 echo.
 echo ╔══════════════════════════════════════════╗
-echo ║     BoolNet 纯布尔对话机器人           ║
-echo ║     16 Q&A, Byte-Stream 输出           ║
-echo ║     全链路 XOR + CMP, 零浮点           ║
+echo ║     BoolNet 对话机器人                  ║
+echo ║  1. v0.5 - 64 Q&A Byte流 (推荐)        ║
+echo ║  2. v0.7 - 16 Token 分类               ║
+echo ║  3. v0.4 - 16 Q&A Byte流               ║
 echo ╚══════════════════════════════════════════╝
 echo.
-echo 试试输入: hello, who are you, goodbye, help
-echo 命令: list (查看所有问题), quit (退出)
-echo.
-boolchat.exe
+set /p choice="选择版本 (1/2/3): "
+if "%choice%"=="1" v0.5-boolchat-v2\boolchat_v2.exe
+if "%choice%"=="2" v0.7-llm-classify\llm_classify.exe
+if "%choice%"=="3" v0.4-boolchat\boolchat.exe
