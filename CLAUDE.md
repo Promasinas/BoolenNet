@@ -35,7 +35,16 @@ gcc -std=c99 -Isrc/common -Isrc/bool_router -Isrc/mem_int -Isrc/boolnet \
 ```
 
 ## Release versions (release/v0.X-name/)
-v0.1(6%)→v0.2(route)→v0.5(100% 64QA)→v0.7(100% classify)🏆→v0.9(200QA)
+v0.1(6%)→v0.2(route)→v0.5(100% 64QA)🏆→v0.7(100% classify)🏆→v0.9(200QA)🏆
+
+## Agent Skills (see docs/agent_skills_distilled.md)
+- **XOR闭式解**: `rb = input XOR target` — 固定映射最优, O(1) 全局最优
+- **级联树**: D=ceil(log₂(N)), 每节点1次CMP, 叶子独立Router
+- **Coord Descent**: O(2N)/sweep, 单模式可用, 多模式卡局部最小值
+- **Memory触发**: Router学路由(去哪), Memory学放大(值多少)
+- **数学限制**: XOR+Manhattan有局部最小值 → 需要同时多比特翻转
+- **编码**: N-gram(≥3)去噪, one-hot分类避免XOR噪声
+- **测试**: 每模块10-22函数, create/destroy/forward/save/load全覆盖
 
 ## Agent 3 Testing (test/uid_001-007/)
 Per-function tests for each module. Run: `test/uid_XXX/t.exe`
