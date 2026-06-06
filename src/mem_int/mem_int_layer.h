@@ -24,7 +24,11 @@ void         mem_int_forward(MemIntLayer *layer, const uint8_t *router_signal);
 void         mem_int_query(const MemIntLayer *layer, uint8_t *trigger_mask);
 int          mem_int_save(const MemIntLayer *layer, const char *filepath);
 MemIntLayer* mem_int_load(const char *filepath);
+void         mem_int_reset(MemIntLayer *layer);
 int          mem_int_all_zero(const MemIntLayer *layer);
 int          mem_int_verify_roundtrip(const MemIntLayer *layer);
+
+/* BoolNet layer adaptor: uint8_t[N] input → signal → forward → query → uint8_t[N] output */
+int mem_int_forward_layer(void *inst, const uint8_t *in, uint8_t *out);
 
 #endif

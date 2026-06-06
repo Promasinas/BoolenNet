@@ -44,13 +44,19 @@ int mem_int_save(const MemIntLayer *l, const char *fp) {
     return (w==l->length)?ML_OK:ML_ERR_FILE_WRITE;
 }
 MemIntLayer* mem_int_load(const char *fp) {
-    if(!fp) return NULL; FILE *f=fopen(fp,"rb"); if(!f) return NULL;
+    if(!fp) return NULL;
+    FILE *f = fopen(fp, "rb");
+    if(!f) return NULL;
     uint32_t u,len; uint8_t p; uint64_t mv,d;
     if(fread(&u,4,1,f)!=1||fread(&p,1,1,f)!=1||fread(&len,4,1,f)!=1||fread(&mv,8,1,f)!=1||fread(&d,8,1,f)!=1) {fclose(f);return NULL;}
     if(!len||p>3){fclose(f);return NULL;}
     MemIntLayer *l=mem_int_create(u,p,len,mv,d); if(!l){fclose(f);return NULL;}
     if(fread(l->cells,csize(p),len,f)!=len){mem_int_destroy(l);fclose(f);return NULL;}
     fclose(f); return l;
+}
+void mem_int_reset(MemIntLayer *l) {
+    if (!l) return;
+    memset(l->cells, 0, l->length * csize(l->precision));
 }
 int mem_int_all_zero(const MemIntLayer *l) {
     if(!l) return 1;
@@ -66,4 +72,23 @@ int mem_int_verify_roundtrip(const MemIntLayer *l) {
     if(l->uid!=ld->uid||l->precision!=ld->precision||l->length!=ld->length||l->max_value!=ld->max_value||l->decay!=ld->decay) mismatch=1;
     if(!mismatch && memcmp(l->cells,ld->cells,l->length*csize(l->precision))!=0) mismatch=2;
     mem_int_destroy(ld); remove(tf); return mismatch;
+}
+
+/* BoolNet layer adaptor: input bytes → trigger signal → forward → query mask → output */
+int mem_int_forward_layer(void *inst, const uint8_t *in, uint8_t *out)
+{
+    MemIntLayer *l = (MemIntLayer*)inst;
+    if (!l || !in || !out) return -1;
+
+    /* Treat input bytes directly as router signal bitmask */
+    uint32_t n = l->length;
+    uint8_t *mask = (uint8_t*)malloc(n);
+    if (!mask) return -2;
+
+    mem_int_forward(l, in);    /* in = router signal */
+    mem_int_query(l, mask);    /* mask = trigger state */
+    memcpy(out, mask, n);      /* output = trigger mask bytes */
+
+    free(mask);
+    return 0;
 }

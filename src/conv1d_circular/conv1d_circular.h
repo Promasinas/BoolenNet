@@ -1,9 +1,8 @@
 /**
  * conv1d_circular.h — 1D Circular Convolution (Constitution V)
  *
- * Kernel overflow wraps around to the beginning, guaranteeing each input
- * position is processed exactly K times.
- * Padding is ignored (circular). Stride and dilation are supported.
+ * Byte-stream interface (uint8_t) for BoolNet framework.
+ * Kernel weights are float; I/O is uint8_t with internal float conversion.
  */
 #ifndef CONV1D_CIRCULAR_H
 #define CONV1D_CIRCULAR_H
@@ -12,23 +11,15 @@
 
 typedef struct {
     LayerUID  uid;
-    uint32_t  input_length;    /* N                           */
-    uint32_t  kernel_size;     /* K                           */
-    uint32_t  stride;          /* output step (default 1)     */
-    uint32_t  dilation;        /* kernel spacing (default 1)  */
-    float    *kernel;          /* length K                    */
-    float    *output;          /* length ceil(N/stride)       */
+    uint32_t  input_length, kernel_size, stride, dilation;
+    float    *kernel;      /* length K, learned params */
 } Conv1D;
 
-/* Lifecycle */
 Conv1D* conv1d_create(LayerUID uid, uint32_t N, uint32_t K, uint32_t stride, uint32_t dilation);
 void    conv1d_destroy(Conv1D *c);
-
-/* Forward: output[i] = Σ_{k=0}^{K-1} kernel[k] * input[(i*stride + k*dilation) % N] */
-int conv1d_forward(const Conv1D *c, const float *input, float *output);
-
-/* Persistence */
-int conv1d_save(const Conv1D *c, const char *path);
+int     conv1d_forward(const Conv1D *c, const uint8_t *input, uint8_t *output);
+int     conv1d_forward_layer(void *inst, const uint8_t *in, uint8_t *out); /* BoolNet adaptor */
+int     conv1d_save(const Conv1D *c, const char *path);
 Conv1D* conv1d_load(const char *path);
 
 #endif

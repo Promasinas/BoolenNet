@@ -10,25 +10,27 @@ Conv1D* conv1d_create(LayerUID uid, uint32_t N, uint32_t K, uint32_t stride, uin
     c->uid = uid; c->input_length = N; c->kernel_size = K;
     c->stride = stride; c->dilation = dilation;
     c->kernel = (float*)calloc(K, sizeof(float));
-    c->output = (float*)calloc((N + stride - 1) / stride, sizeof(float));
-    if (!c->kernel || !c->output) { conv1d_destroy(c); return NULL; }
+    if (!c->kernel) { free(c); return NULL; }
     return c;
 }
-void conv1d_destroy(Conv1D *c) {
-    if (!c) return; free(c->kernel); free(c->output); free(c);
-}
-int conv1d_forward(const Conv1D *c, const float *input, float *output) {
+void conv1d_destroy(Conv1D *c) { if(c){free(c->kernel);free(c);} }
+
+int conv1d_forward(const Conv1D *c, const uint8_t *input, uint8_t *output) {
     if (!c || !input || !output) return -1;
     uint32_t out_len = (c->input_length + c->stride - 1) / c->stride;
     for (uint32_t i = 0; i < out_len; i++) {
         float sum = 0.0f;
         for (uint32_t k = 0; k < c->kernel_size; k++) {
             uint32_t idx = (i * c->stride + k * c->dilation) % c->input_length;
-            sum += c->kernel[k] * input[idx];
+            sum += c->kernel[k] * (float)input[idx];
         }
-        output[i] = sum;
+        if (sum < 0.0f) sum = 0.0f; if (sum > 255.0f) sum = 255.0f;
+        output[i] = (uint8_t)sum;
     }
     return 0;
+}
+int conv1d_forward_layer(void *inst, const uint8_t *in, uint8_t *out) {
+    return conv1d_forward((Conv1D*)inst, in, out);
 }
 int conv1d_save(const Conv1D *c, const char *path) {
     if (!c || !path) return -1;

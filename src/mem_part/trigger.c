@@ -3,7 +3,9 @@
 #include <math.h>
 #include "trigger.h"
 static inline float clamp_w(float w) {
-    if (w > 1.0f) return 1.0f; if (w < -1.0f) return -1.0f; return w;
+    if (w >  1.0f) return  1.0f;
+    if (w < -1.0f) return -1.0f;
+    return w;
 }
 int trigger_compute(const partition_store_t *ps, const trigger_pattern_t *pattern, float *out) {
     if (!ps || !pattern || !out) return PART_ERR_NULL_PARAM;

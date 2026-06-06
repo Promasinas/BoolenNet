@@ -20,8 +20,8 @@ int partition_store_alloc(partition_store_t *ps, uint32_t P, uint32_t D) {
 void partition_store_free(partition_store_t *ps) {
     free(ps->activations); free(ps->occupancy);
     free(ps->last_write); free(ps->last_access);
-    ps->activations = ps->occupancy = NULL;
-    ps->last_write = ps->last_access = NULL;
+    ps->activations = NULL; ps->occupancy = NULL;
+    ps->last_write = NULL; ps->last_access = NULL;
     ps->initialized = false;
 }
 void partition_store_clear(partition_store_t *ps) {

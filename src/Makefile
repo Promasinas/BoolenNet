@@ -11,9 +11,9 @@
 CC      = gcc
 CFLAGS  = -Wall -Wextra -std=c99 -pedantic -I.
 
-.PHONY: all clean mem_int mem_part conv1d upsampling boolnet tsetlin
+.PHONY: all clean mem_int mem_part bool_router conv1d upsampling boolnet tsetlin
 
-all: mem_int mem_part conv1d upsampling boolnet tsetlin
+all: mem_int mem_part bool_router conv1d upsampling boolnet tsetlin
 
 # ---- mem_int/ ----
 mem_int:
@@ -35,12 +35,16 @@ conv1d:
 upsampling:
 	$(CC) $(CFLAGS) -c -o upsampling/upsampling.o upsampling/upsampling.c
 
+# ---- bool_router/ ----
+bool_router:
+	$(CC) $(CFLAGS) -c -o bool_router/bool_router.o bool_router/bool_router.c
+
 # ---- boolnet/ ----
 boolnet:
 	$(CC) $(CFLAGS) -c -o boolnet/boolnet.o boolnet/boolnet.c
 
 # ---- tsetlin_train/ ----
-tsetlin:
+tsetlin: boolnet
 	$(CC) $(CFLAGS) -c -o tsetlin_train/tsetlin_train.o tsetlin_train/tsetlin_train.c
 
 clean:
