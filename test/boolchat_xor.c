@@ -8,7 +8,7 @@
 #include <string.h>
 #include <time.h>
 
-#define N 4096
+#define N 256
 #define N_PAIRS 200
 
 static const char *inputs[N_PAIRS] = {
@@ -277,58 +277,41 @@ static void enc(const char *s, uint8_t *v){memset(v,0,N);if(!s)return;int l=(int
 static void dec(const uint8_t *v, char *o, int m){int j=0;for(int i=0;i<N&&j<m-1;i++){if(v[i]>=32&&v[i]<127)o[j++]=(char)v[i];else if(!v[i])break;}o[j]=0;}
 static int opt(uint8_t *r, const uint8_t *in, const uint8_t *tg){int ch=1,sw=0;while(ch&&sw<10){ch=0;sw++;for(int b=0;b<N;b++)for(int k=0;k<8;k++){uint8_t m=(uint8_t)(1u<<k);int be=0,af=0;for(int i=0;i<N;i++){uint8_t x=(in[i]^r[i])^tg[i];while(x){be+=x&1;x>>=1;}}r[b]^=m;for(int i=0;i<N;i++){uint8_t x=(in[i]^r[i])^tg[i];while(x){af+=x&1;x>>=1;}}if(af>=be)r[b]^=m;else ch++;}}return sw;}
 
+static int save_w(const char *p, uint8_t (*r)[N]){FILE *f=fopen(p,"wb");if(!f)return-1;uint32_t n=N,np=N_PAIRS;fwrite(&n,4,1,f);fwrite(&np,4,1,f);fwrite(r,N,N_PAIRS,f);fclose(f);return 0;}
+static int load_w(const char *p, uint8_t (*r)[N]){FILE *f=fopen(p,"rb");if(!f)return-1;uint32_t n,np;if(fread(&n,4,1,f)!=1||fread(&np,4,1,f)!=1||n!=N||np!=N_PAIRS){fclose(f);return-1;}fread(r,N,N_PAIRS,f);fclose(f);return 0;}
+
 int main(void){
     srand((unsigned)time(NULL));
-    printf("==============================================================\n");
-    printf("  BoolChat XOR - 200 Dialogue Pairs, Coordinate Descent\n");
-    printf("  128 bytes/message, 200 routers, %.0fK trainable bits\n", N*8.0*N_PAIRS/1000);
-    printf("==============================================================\n\n");
+    const char *wf="release/boolchat_weights.bin";
+    uint8_t (*qv)[N]=malloc(N_PAIRS*N),(*routers)[N]=malloc(N_PAIRS*N);
+    if(!qv||!routers){printf("malloc failed\n");return 1;}
+    for(int i=0;i<N_PAIRS;i++)enc(inputs[i],qv[i]);
 
-    uint8_t (*qv)[N]=malloc(N_PAIRS*N),(*av)[N]=malloc(N_PAIRS*N),(*routers)[N]=malloc(N_PAIRS*N);
-    if(!qv||!av||!routers){printf("malloc failed\n");return 1;}
-    for(int i=0;i<N_PAIRS;i++){enc(inputs[i],qv[i]);enc(outputs[i],av[i]);memset(routers[i],0,N);}
-
-    clock_t t0=clock(),t_last=t0;int total_sw=0,perfect=0;
-    int target_sec=300; /* 5 minutes minimum */
-    for(int p=0;p<N_PAIRS;p++){
-        int sw=opt(routers[p],qv[p],av[p]);total_sw+=sw;
-        uint8_t out[N];for(int i=0;i<N;i++)out[i]=qv[p][i]^routers[p][i];
-        int dist=0;for(int i=0;i<N;i++){uint8_t x=out[i]^av[p][i];while(x){dist+=x&1;x>>=1;}}
-        if(dist==0)perfect++;
-        int elapsed=(int)((clock()-t0)/CLOCKS_PER_SEC);
-        if((p+1)%25==0||p==N_PAIRS-1){
-            printf("  [%3d/%d] %d/%d perfect, %d sweeps, %d sec elapsed\n",p+1,N_PAIRS,perfect,p+1,total_sw,elapsed);
-            t_last=clock();
-        }
-        /* If done early, restart with fresh random routers for remaining time */
-        if(p==N_PAIRS-1 && elapsed<target_sec){
-            int extra_rounds=0;
-            while((int)((clock()-t0)/CLOCKS_PER_SEC)<target_sec){
-                for(int i=0;i<N_PAIRS&&(int)((clock()-t0)/CLOCKS_PER_SEC)<target_sec;i++){
-                    memset(routers[i],0,N);
-                    total_sw+=opt(routers[i],qv[i],av[i]);
-                }
-                extra_rounds++;
-                elapsed=(int)((clock()-t0)/CLOCKS_PER_SEC);
-                if(extra_rounds%5==0)printf("  [extra round %d] %d sec elapsed, %d sweeps total\n",extra_rounds,elapsed,total_sw);
-            }
-        }
+    if(load_w(wf,routers)==0){
+        printf("=== BoolChat Release (pre-trained weights loaded) ===\n\n");
+    }else{
+        printf("=== BoolChat Release (training 200 pairs, N=%d, ~5 sec) ===\n\n",N);
+        uint8_t (*av)[N]=malloc(N_PAIRS*N);
+        for(int i=0;i<N_PAIRS;i++)enc(outputs[i],av[i]);
+        memset(routers,0,N_PAIRS*N);
+        clock_t t0=clock();int sw=0;
+        for(int p=0;p<N_PAIRS;p++){sw+=opt(routers[p],qv[p],av[p]);}
+        printf("Trained: %.0f ms, %d sweeps\n",(double)(clock()-t0)*1000/CLOCKS_PER_SEC,sw);
+        save_w(wf,routers);printf("Saved to %s\n\n",wf);
+        free(av);
     }
-    int ms=(int)((clock()-t0)*1000/CLOCKS_PER_SEC);
-    int sec=(int)((clock()-t0)/CLOCKS_PER_SEC);
-    printf("\n=== TRAINING: %d sec (%d ms), %d sweeps, %d/%d PERFECT ===\n\n",sec,ms,total_sw,perfect,N_PAIRS);
 
     printf("=== Chat (quit/list) ===\n");char in[256];
     while(1){printf("\nYou: ");fflush(stdout);if(!fgets(in,sizeof(in),stdin))break;in[strcspn(in,"\n")]=0;
         if(!in[0])continue;
         if(!strcmp(in,"quit")||!strcmp(in,"exit")){printf("BoolBot: Goodbye!\n");break;}
-        if(!strcmp(in,"list")){printf("I know %d topics. Samples:\n",N_PAIRS);for(int i=0;i<N_PAIRS;i+=15)printf("  %s\n",inputs[i]);continue;}
+        if(!strcmp(in,"list")){printf("%d topics:\n",N_PAIRS);for(int i=0;i<N_PAIRS;i+=15)printf("  %s\n",inputs[i]);continue;}
         uint8_t v[N];enc(in,v);int bp=0,bd=999999;
         for(int p=0;p<N_PAIRS;p++){int d=0;for(int i=0;i<N;i++){uint8_t x=v[i]^qv[p][i];while(x){d+=x&1;x>>=1;}}if(d<bd){bd=d;bp=p;}}
         uint8_t o[N];for(int i=0;i<N;i++)o[i]=v[i]^routers[bp][i];
-        char reply[256];dec(o,reply,sizeof(reply));
+        char reply[320];dec(o,reply,sizeof(reply));
         if(bd<N*8/4&&reply[0])printf("BoolBot: %s\n",reply);
-        else printf("BoolBot: Not sure about that. Try: hello, who are you, what is boolnet, nihao, how are you, tell me a joke, bye, thanks...\n");
+        else printf("BoolBot: Not sure. Try: hello, who are you, what is boolnet, nihao, how are you, tell me a joke, bye, thanks...\n");
     }
-    free(qv);free(av);free(routers);return 0;
+    free(qv);free(routers);return 0;
 }
