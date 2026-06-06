@@ -398,6 +398,107 @@ gcc -std=c99 -O2 release/boolchat.c -o boolchat.exe
 | `tsetlin_train_step` 需真实实例 | 单元测试无法覆盖训练路径 | 📝 集成测试覆盖 |
 | 信号放大需 Memory 触发机制 | 直接 Router 输出无法达到 byte-scale | ✅ 设计已解决 |
 
+## Release 程序
+
+预编译的独立可执行文件，无需编译即可运行：
+
+| 程序 | 大小 | 功能 | 准确率 |
+|------|------|------|--------|
+| **`boolchat_v2.exe`** | 62K | 🏆 64 Q&A 纯布尔对话，127 节点路由树，N-gram hash + XOR 输出 | **100%** |
+| `boolchat.exe` | 62K | 基础布尔对话，16 Q&A，路由树 | 良好 |
+| `boolchat_train.exe` | 62K | 训练版，含完整 Tsetlin 训练流程 | — |
+| `chatbot.exe` | 85K | 轻量对话机器人，16 Q&A 级联路由树 | ~6% |
+| `chatbot_cascade.exe` | 61K | 级联路由树，31 节点，每叶子 Router(512b)+Mem(64c) | 路由准确 |
+| `chatbot_trained.exe` | 62K | 预训练版对话模型 | — |
+| `chatbot_full.exe` | 85K | 完整训练流水线 (早停+检查点+导出) | — |
+| `chatbot_byte.exe` | 62K | 字节流处理版 | — |
+| `chatbot_compute.exe` | 60K | 计算模式 | — |
+| `train_long.exe` | 61K | 长训练测试程序 | — |
+
+### 运行
+
+```bash
+# 直接双击或在终端运行
+release/boolchat_v2.exe    # 🏆 推荐：64 Q&A 问答机器人
+
+# 交互示例
+> hello
+BoolBot: Hello! How can I help you today?
+> who are you
+BoolBot: I am BoolBot, a pure Boolean neural network assistant.
+> what is boolnet
+BoolBot: BoolNet is a pure Boolean neural network framework using Tsetlin automata.
+> bye
+BoolBot: Goodbye! Have a great day!
+```
+
+## 模型特性
+
+### 路由树架构 (boolchat_v2)
+
+```
+输入文本 → N-gram Hash → 深度6路由树(127节点)
+         → 63内部节点(逐bit决策) → 64叶子节点
+         → 每叶子: XOR解码 → 输出回复字节
+```
+
+- **N-gram 哈希编码**：输入文本 → 固定长度字节哈希，抗输入变体
+- **127 节点路由树**：63 个内部决策节点 + 64 个叶子回答节点
+- **逐 bit 路由**：每个内部节点通过 1 bit 决策走左/右子树
+- **XOR 输出解码**：叶子节点 Router XOR 将路由信号解码为回复字节
+- **O(log N) 查找**：6 层深度即可覆盖 64 个 Q&A
+
+### 训练方式
+
+| 算法 | 原理 | 速度 | 适用场景 |
+|------|------|------|----------|
+| **Tsetlin** | 随机 bit 翻转 + 奖励驱动 | 慢 (5000+ 步) | 探索性搜索 |
+| **CoordDescent** | 逐 bit 贪心扫描，每轮只保留改进 | 快 (2 扫) | 确定性收敛 |
+
+```
+CoordDescent 示例: 32 bit 路由器, 2 次扫描收敛 (vs Tsetlin 5000 步)
+  Sweep 1: 逐个尝试 32 bit, 保留 3 个改进 → reward 255→1020
+  Sweep 2: 再次扫描 32 bit, 无新改进 → 收敛 ✅
+```
+
+### 模型持久化
+
+训练产出统一存放在 [`weights/`](weights/) 目录，TENB 二进制格式：
+
+```
+weights/
+├── simple_llm_model.bin    # Simple LLM (256 可训 bit)
+├── boolchat_model.bin      # BoolChat 路由树权重
+├── best.bin                # 最佳 checkpoint
+└── ckpt_*.bin              # 训练检查点
+```
+
+## 测试结果
+
+全部 **84 项单元测试 + 集成测试**（Agent 3 验证）：
+
+| UID | 模块 | 函数测试 | 通过率 | 说明 |
+|-----|------|---------|--------|------|
+| 1 | bool_router | 13 | 100% | XOR 路由 + flip_bit + forward_layer |
+| 2 | mem_int | 12 | 100% | 触发恢复 + 衰减 + save/load/roundtrip |
+| 3 | mem_part | 16 | 100% | 分区读写 + LRU + trigger 加权和 |
+| 4 | conv1d_circular | 13 | 100% | 布尔核回环 + flip_kernel_bit |
+| 5 | upsampling | 11 | 100% | 多路由并行 + cascade |
+| 6 | boolnet | 9 | 100% | 网络拓扑 + forward + save/load |
+| 7 | tsetlin_train | 10 | 100% | 训练框架 + 统计 + 导出 |
+
+### Release 程序测试
+
+| 程序 | 测试结果 |
+|------|----------|
+| `boolchat_v2.exe` | ✅ 64/64 Q&A 路由正确，127 节点树 |
+| `chatbot_cascade.exe` | ✅ 16 叶子路由正确，响应字节略有偏差 |
+| `chatbot.exe` | 🟡 1/16 准确 (2 层架构限制) |
+| `simple_llm` | 🟡 4/5 对话正确 (Tsetlin 收敛到局部最优) |
+| `coord_descent_demo` | ✅ 2 扫收敛，比 Tsetlin 快 2500× |
+
+报告：[`docs/test/`](docs/test/)
+
 ## 许可证
 
 MIT License
