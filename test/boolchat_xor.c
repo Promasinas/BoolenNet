@@ -5,6 +5,7 @@
  * Coordinate descent finds this in O(2N) without Memory layer bottleneck.
  * Text output requires arbitrary byte values → skip Memory, use direct XOR.
  */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
