@@ -114,7 +114,7 @@ int main(void)
         .early_stop_patience = 8,
         .checkpoint_every = 5,
         .eval_every = 100,
-        .checkpoint_dir = "."
+        .checkpoint_dir = "weights"
     };
 
     clock_t t1 = clock();
@@ -127,7 +127,7 @@ int main(void)
            train_sec, t->step_count / (train_sec + 0.001));
 
     /* ---- Export ---- */
-    tsetlin_export_model(t->network, "net128_model.bin");
+    tsetlin_export_model(t->network, "weights/net128_model.bin");
 
     /* ---- Inference ---- */
     printf("\n═══ Inference ═══\n");

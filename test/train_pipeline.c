@@ -88,7 +88,7 @@ int main(void)
         .early_stop_patience = 5,
         .checkpoint_every = 5,
         .eval_every = 100,
-        .checkpoint_dir = "."
+        .checkpoint_dir = "weights"
     };
 
     /* 4. Train */
@@ -98,7 +98,7 @@ int main(void)
         N_IN, N_CELLS, reset_mem);
 
     /* 5. Export */
-    tsetlin_export_model(t->network, "final_model.bin");
+    tsetlin_export_model(t->network, "weights/final_model.bin");
 
     /* 6. Final inference demo */
     printf("\n═══ Inference Demo ═══\n");

@@ -106,7 +106,7 @@ int main(void)
     printf("\nSteps:%u  Ok:%u  Acc:%d/%d  Flips:%d/%d  Time:%.1fs\n",
            st, ac, ok, N_PATS, flips, N_PAIRS*128, sec);
 
-    tsetlin_export_model(net, "deep_rm_model.bin");
+    tsetlin_export_model(net, "weights/deep_rm_model.bin");
     tsetlin_destroy(t); boolnet_destroy(net);
     return 0;
 }

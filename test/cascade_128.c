@@ -111,7 +111,7 @@ int main(void)
     printf("\nSteps:%u  Ok:%u (%.0f%%)  Acc:%d/%d  Flips:%d/128\n",
            st, ac, st?100.0f*ac/st:0, ok, N_PATS, flips);
 
-    tsetlin_export_model(net, "cascade128_model.bin");
+    tsetlin_export_model(net, "weights/cascade128_model.bin");
     tsetlin_destroy(t); boolnet_destroy(net);
     return 0;
 }

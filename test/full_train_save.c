@@ -144,7 +144,7 @@ int main(void)
 
     /* ==== 5. SAVE ==== */
     printf("\n═══ Saving Model ═══\n");
-    save_model(net, "boolnet_model.bin");
+    save_model(net, "weights/boolnet_model.bin");
 
     /* Save individual router weights (human-readable) */
     printf("  Router1 bits: [%02X %02X %02X %02X]\n", r1->bits[0],r1->bits[1],r1->bits[2],r1->bits[3]);
@@ -152,12 +152,12 @@ int main(void)
     printf("  Router2 bits: [%02X %02X %02X %02X]\n", r2->bits[0],r2->bits[1],r2->bits[2],r2->bits[3]);
 
     /* Save memory state */
-    mem_int_save(m2, "memory_output.bin");
+    mem_int_save(m2, "weights/memory_output.bin");
     printf("  Memory state saved to: memory_output.bin\n");
 
     /* ==== 6. LOAD & VERIFY ==== */
     printf("\n═══ Load & Verify ═══\n");
-    MemIntLayer *loaded_mem = mem_int_load("memory_output.bin");
+    MemIntLayer *loaded_mem = mem_int_load("weights/memory_output.bin");
     if (loaded_mem) {
         printf("  Loaded memory: uid=%u, cells=%u, precision=%u\n",
                loaded_mem->uid, loaded_mem->length, loaded_mem->precision);

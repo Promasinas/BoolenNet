@@ -107,7 +107,7 @@ int main(void)
         .early_stop_patience = 50,
         .checkpoint_every = 50,
         .eval_every = 100,
-        .checkpoint_dir = "."
+        .checkpoint_dir = "weights"
     };
 
     printf("Training: %d patterns, %d epochs, %d steps/epoch\n",
@@ -159,7 +159,7 @@ int main(void)
     printf("  Training time: %.1f sec (%.0f steps/sec)\n",
            train_sec, st/(train_sec+0.001));
 
-    tsetlin_export_model(net, "deep128_model.bin");
+    tsetlin_export_model(net, "weights/deep128_model.bin");
 
     tsetlin_destroy(t); boolnet_destroy(net);
     return 0;

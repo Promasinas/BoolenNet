@@ -68,7 +68,8 @@ void tsetlin_get_stats(const TsetlinTrainer *t, uint32_t *steps, uint32_t *accep
 int  tsetlin_save(const TsetlinTrainer *t, const char *path);
 TsetlinTrainer* tsetlin_load(const char *path);
 
-/* ---- Model Export ---- */
-int  tsetlin_export_model(BoolNet *net, const char *path);
+/* ---- Model Export / Import ---- */
+int      tsetlin_export_model(BoolNet *net, const char *path);
+BoolNet* tsetlin_import_model(const char *path);
 
 #endif
