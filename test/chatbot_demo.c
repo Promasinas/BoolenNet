@@ -42,17 +42,32 @@ static const char *answers[N_QA] = {
     "命令: 输入中文问题, 'list' 查看问题, 'quit' 退出。"
 };
 
-/* 简单位置敏感 byte-hash 编码 */
+/* 增强编码: 多重 hash 确保不同输入产生区分度高的向量 */
 static void encode(const char *text, uint8_t *vec)
 {
     memset(vec, 0, N_BYTES);
     int len = (int)strlen(text);
-    for (int i = 0; i < len; i++) {
-        int pos = (i * 7 + 3) % N_BYTES;
-        vec[pos] ^= (uint8_t)(text[i] + (i % 31));
+    if (!len) { vec[0] = 0xFF; return; }
+
+    /* 首尾字符权重高 */
+    vec[0]  = (uint8_t)text[0];
+    vec[1]  = (uint8_t)text[len-1];
+    vec[2]  = (uint8_t)len;
+
+    /* 字符 bigram hash */
+    for (int i = 0; i < len - 1; i++) {
+        int pos = (text[i] + text[i+1]) % N_BYTES;
+        vec[pos] ^= (uint8_t)((text[i] * 31 + text[i+1] * 17) & 0xFF);
     }
-    vec[0] ^= (uint8_t)(len & 0xFF);
-    vec[N_BYTES-1] ^= (uint8_t)((len >> 4) & 0xFF);
+
+    /* 全部字符累积 */
+    for (int i = 0; i < len; i++) {
+        int pos = (i * 7 + 13) % N_BYTES;
+        vec[pos] ^= (uint8_t)text[i];
+    }
+
+    /* 保证非零 */
+    vec[N_BYTES-1] |= 0x01;
 }
 
 /* 计算两个向量的汉明距离 */
@@ -111,8 +126,8 @@ int main(void)
         if (rc == -2) break;
     }
 
-    uint32_t st, ac; int32_t br;
-    tsetlin_get_stats(t, &st, &ac, &br, NULL, NULL);
+    uint32_t st, ac, ep; int32_t br, bv;
+    tsetlin_get_stats(t, &st, &ac, &br, &ep, &bv);
     printf("训练步数: %u  接受翻转: %u (%.0f%%)\n\n", st, ac, st?100.0f*ac/st:0);
 
     /* 4. 训练集评估 */

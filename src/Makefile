@@ -49,7 +49,7 @@ tsetlin: boolnet
 
 # ---- LLM Network Integration Test ----
 llm_test: all
-	$(CC) $(CFLAGS) -I. -o ../test/llm_network_test.exe ../test/llm_network_test.c \
+	$(CC) $(CFLAGS) -I. -o ../build/llm_network_test.exe ../build/llm_network_test.c \
 		bool_router/bool_router.o conv1d_circular/conv1d_circular.o \
 		upsampling/upsampling.o mem_int/mem_int_layer.o \
 		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
@@ -57,48 +57,49 @@ llm_test: all
 
 # ---- Agent 1 Training Tests ----
 train_tests: all
-	$(CC) $(CFLAGS) -I. -o ../test/train_test.exe ../test/train_test.c \
+	$(CC) $(CFLAGS) -I. -o ../build/train_test.exe ../build/train_test.c \
 		bool_router/bool_router.o mem_int/mem_int_layer.o \
 		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
-	$(CC) $(CFLAGS) -I. -o ../test/boolnet_train.exe ../test/boolnet_train.c \
+	$(CC) $(CFLAGS) -I. -o ../build/boolnet_train.exe ../build/boolnet_train.c \
 		bool_router/bool_router.o mem_int/mem_int_layer.o \
 		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] train_test.exe + boolnet_train.exe built"
 
 # ---- Full Train → Save → Load → Infer ----
 full_train: all
-	$(CC) $(CFLAGS) -I. -o ../test/full_train_save.exe ../test/full_train_save.c \
+	$(CC) $(CFLAGS) -I. -o ../build/full_train_save.exe ../build/full_train_save.c \
 		bool_router/bool_router.o conv1d_circular/conv1d_circular.o \
 		mem_int/mem_int_layer.o boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] full_train_save.exe built"
 
 # ---- 128-Wide Network Training ----
 net128: all
-	$(CC) $(CFLAGS) -I. -o ../test/net128_train.exe ../test/net128_train.c \
+	$(CC) $(CFLAGS) -I. -o ../build/net128_train.exe ../build/net128_train.c \
 		bool_router/bool_router.o conv1d_circular/conv1d_circular.o \
 		mem_int/mem_int_layer.o boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] net128_train.exe built"
 
 # ---- Full Training Pipeline ----
 train_pipeline: all
-	$(CC) $(CFLAGS) -I. -o ../test/train_pipeline.exe ../test/train_pipeline.c \
+	$(CC) $(CFLAGS) -I. -o ../build/train_pipeline.exe ../build/train_pipeline.c \
 		bool_router/bool_router.o conv1d_circular/conv1d_circular.o \
 		mem_int/mem_int_layer.o boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] train_pipeline.exe built"
 
 # ---- Simple LLM (Dialogue Model) ----
 simple_llm: bool_router mem_int boolnet tsetlin
-	$(CC) $(CFLAGS) -I. -o ../test/simple_llm.exe simple_llm/simple_llm.c \
+	$(CC) $(CFLAGS) -I. -o ../build/simple_llm.exe simple_llm/simple_llm.c \
 		bool_router/bool_router.o mem_int/mem_int_layer.o \
 		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] simple_llm.exe built"
 
 # ---- Chatbot Demo (16 Q&A) ----
 chatbot: bool_router mem_int boolnet tsetlin
-	$(CC) $(CFLAGS) -I. -o ../test/chatbot_demo.exe ../test/chatbot_demo.c \
+	$(CC) $(CFLAGS) -I. -o ../release/chatbot.exe ../build/chatbot_demo.c \
 		bool_router/bool_router.o mem_int/mem_int_layer.o \
 		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
-	@echo "[OK] chatbot_demo.exe built"
+	@echo "[OK] release/chatbot.exe built"
 
 clean:
-	rm -f mem_int/*.o mem_part/*.o bool_router/*.o conv1d_circular/*.o upsampling/*.o boolnet/*.o tsetlin_train/*.o ../test/llm_network_test.exe
+	rm -f mem_int/*.o mem_part/*.o bool_router/*.o conv1d_circular/*.o upsampling/*.o boolnet/*.o tsetlin_train/*.o
+	rm -f ../build/*.exe
