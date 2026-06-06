@@ -350,43 +350,51 @@ docs/test/ → Agent 2 (修复) → Agent 3 (再测试) → ✅
 
 ## 🆕 纯布尔 Byte-Stream 对话机器人
 
-**全链路纯布尔运算**的轻量级对话系统。输入文本 → XOR hash → 级联路由树 → Router XOR → Byte 流输出。
+**全链路纯布尔运算**的轻量级对话系统。两个版本：
+
+| 版本 | Q&A | 架构 | 准确率 | 文件 |
+|------|-----|------|--------|------|
+| v1 | 16 | 深度4树 + XOR byte流 | 100% | [`boolchat.c`](release/boolchat.c) |
+| **v2** | **64** | 深度6树 + N-gram hash | **100%** | [`boolchat_v2.c`](release/boolchat_v2.c) |
+| LLM | 16 tokens | 深度4树 + one-hot分类 | 100% | [`llm_classify.c`](release/llm_classify.c) |
 
 ```
-输入 "hello"  → 实时计算 → hex: 48 65 6C 6C 6F 21 20 48 6F 77 20...
-                          → text: "Hello! How can I help you?"
+输入 "hello" → 路由树(CMP) → 叶子 XOR → byte流/argmax → "Hello! How can I help you?"
+             全链路纯布尔: XOR + CMP only, 零浮点, 零矩阵乘, <1ms
 ```
 
-| 特性 | 值 |
-|------|-----|
-| 16 组 Q&A | 精确匹配 100% |
-| 推理速度 | < 1ms |
-| 运算类型 | XOR + CMP only (零浮点/零矩阵乘) |
-| 参数量 | 8,192 bits (16 × 512bit Router) |
-| 可执行文件 | [`release/boolchat.exe`](release/boolchat.exe) (62KB) |
-
-### 运行对话机器人
+### 运行
 
 ```bash
 cd release
-./boolchat.exe
-# > hello
-# BoolBot: Hello! How can I help you?
-# > quit
+./boolchat_v2.exe        # 64 Q&A byte 流对话
+./llm_classify.exe       # 16 token 分类对话
+# 或双击 start_chat.bat
 ```
 
-或双击 `release/start_chat.bat`
+| 命令 | 功能 |
+|------|------|
+| `hello` / `who are you` / ... | 对话 |
+| `list` | 查看所有问题 |
+| `quit` | 退出 |
 
-### 源码
+### 核心发现
 
-```bash
-gcc -std=c99 -O2 release/boolchat.c -o boolchat.exe
-```
+- **XOR 闭式解**: `router_bits = input XOR target` 是当前最优方案
+- **级联路由树**: 多分类正确架构 (1 leaf / pattern)
+- **Tsetlin 限制**: XOR+Manhattan 距离有局部最小值; 单比特翻转无法逃逸
+- **Coord Descent 限制**: 同样卡局部最小值; 暴力搜索证实数学上不可能
 
-全链路纯布尔：
-- `encode()`: XOR hash → 64 bytes
-- 路由树: 4 次 CMP → leaf 索引
-- Leaf Router: 64 次 XOR → 输出 bytes
+## Release 程序列表
+
+| 程序 | 功能 | Q&A | 架构 |
+|------|------|-----|------|
+| `boolchat.exe` | Byte流对话 | 16 | 树+XOR |
+| `boolchat_v2.exe` | Byte流对话(大) | 64 | N-gram+树+XOR |
+| `llm_classify.exe` | 分类对话 | 16 tokens | one-hot+树+XOR |
+| `simple_llm.exe` | Agent2实现 | 5对 | Router+Memory |
+| `start_chat.bat` | 一键启动 | — | — |
+| `start_test.bat` | 一键测试 | — | — |
 
 ---
 
