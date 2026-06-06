@@ -11,6 +11,93 @@
 
 ---
 
+## 5 分钟快速开始
+
+### 1. 运行对话机器人 (exe)
+
+```bash
+# Windows: 双击运行
+release/start_chat.bat
+
+# 或命令行
+cd release && boolchat.exe
+```
+
+输入 `hello` 试试：
+
+```
+> hello
+BoolBot: Hello! How can I help you?
+(路由 leaf[0], 纯 XOR 计算, <1ms)
+```
+
+| 命令 | 功能 |
+|------|------|
+| `hello` / `who are you` / ... | 对话 (16 组内置 Q&A) |
+| `list` | 查看所有可问的问题 |
+| `quit` | 退出 |
+
+### 2. 自己编译
+
+```bash
+# 纯布尔对话机器人 (推荐)
+cd release
+gcc -std=c99 -O2 boolchat.c -o boolchat.exe
+./boolchat.exe
+
+# 带 BoolNet 库的完整版 (含 Tsetlin 训练)
+gcc -std=c99 -O2 -Isrc ../test/chatbot_demo.c \
+    ../src/bool_router/bool_router.c \
+    ../src/boolnet/boolnet.c \
+    ../src/mem_int/mem_int_layer.c \
+    ../src/tsetlin_train/tsetlin_train.c \
+    ../src/conv1d_circular/conv1d_circular.c \
+    ../src/upsampling/upsampling.c \
+    -o chatbot_full.exe -lm
+```
+
+### 3. 训练自己的网络
+
+```bash
+cd test
+
+# 最小训练示例 (2 层, 1 个模式, 已验证收敛)
+gcc -std=c99 -O2 -I../src train_test.c ../src/*.o -o train.exe -lm
+./train.exe
+# 输出: Router bits learned, reward=1020 (perfect!)
+
+# 完整训练流程 (5 层, Train→Save→Load→Infer)
+gcc -std=c99 -O2 -I../src full_train_save.c ../src/*.o -o full.exe -lm
+./full.exe
+# 输出: 4/4 准确率, 模型保存到 weights/
+```
+
+### 4. 编写训练代码
+
+```c
+#include "tsetlin_train.h"
+
+// 构建网络
+BoolNet *net = boolnet_create(1, 4, 2);
+BoolRouter *r = bool_router_create(1, 32, init_bits);
+MemIntLayer *m = mem_int_create(2, ML_PRECISION_UINT8, 4, 255, 0);
+boolnet_add_layer(net, LAYER_ROUTER, 1, r, ...);
+boolnet_add_layer(net, LAYER_MEMORY, 2, m, ...);
+
+// 训练
+TsetlinTrainer *t = tsetlin_create(net, 5000, 1020);
+uint8_t input[4]  = {0x01, 0x01, 0x01, 0x01};
+uint8_t target[4] = {0x01, 0x00, 0x00, 0x00};
+
+for (int s = 0; s < 10000; s++)
+    tsetlin_train_step(t, input, target);
+
+// 保存
+tsetlin_export_model(net, "weights/my_model.bin");
+```
+
+---
+
 ## 核心思想
 
 ```
@@ -260,6 +347,48 @@ Agent 3 (测试) ← docs/interact/ ← Agent 2 (通知)
     ↓
 docs/test/ → Agent 2 (修复) → Agent 3 (再测试) → ✅
 ```
+
+## 🆕 纯布尔 Byte-Stream 对话机器人
+
+**全链路纯布尔运算**的轻量级对话系统。输入文本 → XOR hash → 级联路由树 → Router XOR → Byte 流输出。
+
+```
+输入 "hello"  → 实时计算 → hex: 48 65 6C 6C 6F 21 20 48 6F 77 20...
+                          → text: "Hello! How can I help you?"
+```
+
+| 特性 | 值 |
+|------|-----|
+| 16 组 Q&A | 精确匹配 100% |
+| 推理速度 | < 1ms |
+| 运算类型 | XOR + CMP only (零浮点/零矩阵乘) |
+| 参数量 | 8,192 bits (16 × 512bit Router) |
+| 可执行文件 | [`release/boolchat.exe`](release/boolchat.exe) (62KB) |
+
+### 运行对话机器人
+
+```bash
+cd release
+./boolchat.exe
+# > hello
+# BoolBot: Hello! How can I help you?
+# > quit
+```
+
+或双击 `release/start_chat.bat`
+
+### 源码
+
+```bash
+gcc -std=c99 -O2 release/boolchat.c -o boolchat.exe
+```
+
+全链路纯布尔：
+- `encode()`: XOR hash → 64 bytes
+- 路由树: 4 次 CMP → leaf 索引
+- Leaf Router: 64 次 XOR → 输出 bytes
+
+---
 
 ## 已知问题
 
