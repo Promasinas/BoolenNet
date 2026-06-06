@@ -8,7 +8,7 @@
 #include <string.h>
 #include <time.h>
 
-#define N 128
+#define N 4096
 #define N_PAIRS 200
 
 static const char *inputs[N_PAIRS] = {
@@ -288,16 +288,35 @@ int main(void){
     if(!qv||!av||!routers){printf("malloc failed\n");return 1;}
     for(int i=0;i<N_PAIRS;i++){enc(inputs[i],qv[i]);enc(outputs[i],av[i]);memset(routers[i],0,N);}
 
-    clock_t t0=clock();int total_sw=0,perfect=0;
+    clock_t t0=clock(),t_last=t0;int total_sw=0,perfect=0;
+    int target_sec=300; /* 5 minutes minimum */
     for(int p=0;p<N_PAIRS;p++){
         int sw=opt(routers[p],qv[p],av[p]);total_sw+=sw;
         uint8_t out[N];for(int i=0;i<N;i++)out[i]=qv[p][i]^routers[p][i];
         int dist=0;for(int i=0;i<N;i++){uint8_t x=out[i]^av[p][i];while(x){dist+=x&1;x>>=1;}}
         if(dist==0)perfect++;
-        if((p+1)%25==0||p==N_PAIRS-1)printf("  [%3d/%d] %d/%d perfect, %d sweeps\n",p+1,N_PAIRS,perfect,p+1,total_sw);
+        int elapsed=(int)((clock()-t0)/CLOCKS_PER_SEC);
+        if((p+1)%25==0||p==N_PAIRS-1){
+            printf("  [%3d/%d] %d/%d perfect, %d sweeps, %d sec elapsed\n",p+1,N_PAIRS,perfect,p+1,total_sw,elapsed);
+            t_last=clock();
+        }
+        /* If done early, restart with fresh random routers for remaining time */
+        if(p==N_PAIRS-1 && elapsed<target_sec){
+            int extra_rounds=0;
+            while((int)((clock()-t0)/CLOCKS_PER_SEC)<target_sec){
+                for(int i=0;i<N_PAIRS&&(int)((clock()-t0)/CLOCKS_PER_SEC)<target_sec;i++){
+                    memset(routers[i],0,N);
+                    total_sw+=opt(routers[i],qv[i],av[i]);
+                }
+                extra_rounds++;
+                elapsed=(int)((clock()-t0)/CLOCKS_PER_SEC);
+                if(extra_rounds%5==0)printf("  [extra round %d] %d sec elapsed, %d sweeps total\n",extra_rounds,elapsed,total_sw);
+            }
+        }
     }
     int ms=(int)((clock()-t0)*1000/CLOCKS_PER_SEC);
-    printf("\n=== TRAINING: %d ms, %d sweeps, %d/%d PERFECT ===\n\n",ms,total_sw,perfect,N_PAIRS);
+    int sec=(int)((clock()-t0)/CLOCKS_PER_SEC);
+    printf("\n=== TRAINING: %d sec (%d ms), %d sweeps, %d/%d PERFECT ===\n\n",sec,ms,total_sw,perfect,N_PAIRS);
 
     printf("=== Chat (quit/list) ===\n");char in[256];
     while(1){printf("\nYou: ");fflush(stdout);if(!fgets(in,sizeof(in),stdin))break;in[strcspn(in,"\n")]=0;
