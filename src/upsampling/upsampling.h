@@ -23,5 +23,7 @@ int            upsample_set_router(UpsampleLayer *u, uint32_t idx, const uint8_t
 int            upsample_forward(const UpsampleLayer *u, const uint8_t *input, uint8_t *output);
 int            upsample_forward_layer(void *inst, const uint8_t *in, uint8_t *out);
 int            upsample_cascade(UpsampleLayer **layers, uint32_t count, const uint8_t *input, uint8_t *output);
+int            upsample_save(const UpsampleLayer *u, const char *path);
+UpsampleLayer* upsample_load(const char *path);
 
 #endif

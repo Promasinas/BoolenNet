@@ -24,5 +24,7 @@ int      part_mgr_get_status(uint32_t address, part_status_t *out);
 int      part_mgr_get_bitmask(uint8_t *out_bitmask);
 uint32_t part_mgr_occupied_count(void);
 float    part_mgr_fill_ratio(void);
+int      part_mgr_save(const char *path);
+int      part_mgr_load(const char *path);
 
 #endif

@@ -85,3 +85,33 @@ int part_mgr_get_bitmask(uint8_t *bm) {
     memcpy(bm, g_store.occupancy, (g_P + 7) / 8);
     return PART_OK;
 }
+
+/* ---- Persistence ---- */
+int part_mgr_save(const char *path) {
+    if (!g_ok || !path) return -1;
+    FILE *f = fopen(path, "wb"); if (!f) return -2;
+    fwrite(&g_P,4,1,f); fwrite(&g_D,4,1,f);
+    size_t vec_bytes = (size_t)g_P * g_D * sizeof(float);
+    fwrite(g_store.activations, 1, vec_bytes, f);
+    fwrite(g_store.occupancy, 1, (g_P + 7) / 8, f);
+    fwrite(g_store.last_write, sizeof(uint64_t), g_P, f);
+    fwrite(g_store.last_access, sizeof(uint64_t), g_P, f);
+    fwrite(&g_store.global_clock, 8, 1, f);
+    fclose(f); return 0;
+}
+int part_mgr_load(const char *path) {
+    if (!path) return -1;
+    FILE *f = fopen(path, "rb"); if (!f) return -2;
+    uint32_t P, D;
+    if (fread(&P,4,1,f)!=1||fread(&D,4,1,f)!=1) { fclose(f); return -1; }
+    int rc = part_mgr_init(P, D);
+    if (rc) { fclose(f); return rc; }
+    size_t vec_bytes = (size_t)P * D * sizeof(float);
+    fread(g_store.activations, 1, vec_bytes, f);
+    fread(g_store.occupancy, 1, (P + 7) / 8, f);
+    fread(g_store.last_write, sizeof(uint64_t), P, f);
+    fread(g_store.last_access, sizeof(uint64_t), P, f);
+    fread(&g_store.global_clock, 8, 1, f);
+    g_store.initialized = true; g_ok = true;
+    fclose(f); return 0;
+}

@@ -2,6 +2,10 @@
 #include <string.h>
 #include <stdio.h>
 #include "boolnet.h"
+#include "../bool_router/bool_router.h"
+#include "../mem_int/mem_int_layer.h"
+#include "../conv1d_circular/conv1d_circular.h"
+#include "../upsampling/upsampling.h"
 
 BoolNet* boolnet_create(LayerUID uid, uint32_t dim, uint32_t max_layers)
 {
@@ -72,11 +76,46 @@ int boolnet_save(const BoolNet *n, const char *path)
 {
     if (!n || !path) return -1;
     FILE *f = fopen(path, "wb"); if (!f) return -2;
+
+    /* Header */
     fwrite(&n->uid,4,1,f); fwrite(&n->num_layers,4,1,f);
     fwrite(&n->input_dim,4,1,f); fwrite(&n->output_dim,4,1,f);
+
     for (uint32_t i = 0; i < n->num_layers; i++) {
         fwrite(&n->layers[i].type,4,1,f);
         fwrite(&n->layers[i].uid,4,1,f);
+
+        /* Save layer data to temp file, then inline it */
+        uint32_t data_size = 0;
+        long size_pos = ftell(f);
+        fwrite(&data_size, 4, 1, f); /* placeholder */
+
+        if (n->layers[i].save_fn) {
+            char tmp[64];
+            snprintf(tmp, sizeof(tmp), "_bn_tmp_%u.bin", i);
+            if (n->layers[i].save_fn(n->layers[i].instance, tmp) == 0) {
+                FILE *tf = fopen(tmp, "rb");
+                if (tf) {
+                    fseek(tf, 0, SEEK_END);
+                    data_size = (uint32_t)ftell(tf);
+                    fseek(tf, 0, SEEK_SET);
+                    uint8_t *buf = (uint8_t*)malloc(data_size);
+                    if (buf) {
+                        fread(buf, 1, data_size, tf);
+                        fwrite(buf, 1, data_size, f);
+                        free(buf);
+                    }
+                    fclose(tf);
+                }
+                remove(tmp);
+            }
+        }
+
+        /* Backfill actual size */
+        long cur = ftell(f);
+        fseek(f, size_pos, SEEK_SET);
+        fwrite(&data_size, 4, 1, f);
+        fseek(f, cur, SEEK_SET);
     }
     fclose(f); return 0;
 }
@@ -98,5 +137,45 @@ BoolNet* boolnet_load(const char *path)
         n->layers[i].uid = luid;
     }
     n->num_layers = nl; n->output_dim = od;
+
+    /* Read inline layer data */
+    for (uint32_t i = 0; i < nl; i++) {
+        uint32_t data_size;
+        if (fread(&data_size, 4, 1, f) != 1) continue;
+        if (data_size == 0 || !n->layers[i].save_fn) {
+            /* skip data */
+            fseek(f, data_size, SEEK_CUR);
+            continue;
+        }
+
+        /* Write data to temp file, load via layer's load function */
+        uint8_t *buf = (uint8_t*)malloc(data_size);
+        if (!buf) { fseek(f, data_size, SEEK_CUR); continue; }
+        if (fread(buf, 1, data_size, f) != data_size) { free(buf); continue; }
+
+        char tmp[64];
+        snprintf(tmp, sizeof(tmp), "_bn_load_%u.bin", i);
+        FILE *tf = fopen(tmp, "wb");
+        if (tf) {
+            fwrite(buf, 1, data_size, tf);
+            fclose(tf);
+            /* Call type-specific load to restore instance */
+            if (n->layers[i].type == LAYER_ROUTER) {
+                BoolRouter *r = bool_router_load(tmp);
+                if (r) n->layers[i].instance = r;
+            } else if (n->layers[i].type == LAYER_MEMORY) {
+                MemIntLayer *m = mem_int_load(tmp);
+                if (m) n->layers[i].instance = m;
+            } else if (n->layers[i].type == LAYER_CONV1D) {
+                Conv1D *c = conv1d_load(tmp);
+                if (c) n->layers[i].instance = c;
+            } else if (n->layers[i].type == LAYER_UPSAMPLE) {
+                UpsampleLayer *u = upsample_load(tmp);
+                if (u) n->layers[i].instance = u;
+            }
+        }
+        free(buf);
+        remove(tmp);
+    }
     fclose(f); return n;
 }

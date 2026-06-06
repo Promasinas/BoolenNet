@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "upsampling.h"
@@ -59,4 +60,25 @@ int upsample_cascade(UpsampleLayer **layers, uint32_t count, const uint8_t *inpu
     }
     if (src != output) memcpy(output, src, cur);
     free(b1); free(b2); return 0;
+}
+
+/* ---- Persistence ---- */
+int upsample_save(const UpsampleLayer *u, const char *path) {
+    if (!u || !path) return -1;
+    FILE *f = fopen(path, "wb"); if (!f) return -2;
+    fwrite(&u->uid,4,1,f); fwrite(&u->num_routers,4,1,f); fwrite(&u->input_length,4,1,f);
+    for (uint32_t i = 0; i < u->num_routers; i++)
+        fwrite(u->routers[i].bits, 1, u->input_length, f);
+    fclose(f); return 0;
+}
+UpsampleLayer* upsample_load(const char *path) {
+    if (!path) return NULL;
+    FILE *f = fopen(path, "rb"); if (!f) return NULL;
+    uint32_t uid, M, N;
+    if (fread(&uid,4,1,f)!=1||fread(&M,4,1,f)!=1||fread(&N,4,1,f)!=1) { fclose(f); return NULL; }
+    UpsampleLayer *u = upsample_create(uid, M, N);
+    if (!u) { fclose(f); return NULL; }
+    for (uint32_t i = 0; i < M; i++)
+        if (fread(u->routers[i].bits, 1, N, f) != N) { upsample_destroy(u); fclose(f); return NULL; }
+    fclose(f); return u;
 }
