@@ -196,3 +196,5 @@ int sl_demo(void) {
     boolnet_destroy(net);
     return (final_correct >= 3) ? 0 : 1;
 }
+
+int main(void) { return sl_demo(); }
