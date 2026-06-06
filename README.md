@@ -1,10 +1,10 @@
 # BoolNet — Pure Boolean Neural Network Framework
 
 [![C99](https://img.shields.io/badge/C-C99-blue)](src/)
-[![Build](https://img.shields.io/badge/build-make-green)](src/Makefile)
-[![Tests](https://img.shields.io/badge/tests-94%2F94-brightgreen)](docs/test/)
+[![Build](https://img.shields.io/badge/build-gcc-green)](src/Makefile)
+[![Tests](https://img.shields.io/badge/tests-84%2F84-brightgreen)](docs/test/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20MinGW-lightgrey)]()
-[![Modules](https://img.shields.io/badge/modules-8-blue)](src/)
+[![Modules](https://img.shields.io/badge/modules-7-blue)](src/)
 
 **BoolNet** 是一个完全基于布尔运算的神经网络框架。不使用反向传播或梯度下降，
 而是通过**布尔路由器**、**Tsetlin 自动机**和**级联记忆层**实现学习和推理。
@@ -20,9 +20,8 @@ Byte Stream → [Boolean Router] → [Circular Conv1D] → [Memory Layer]
 
 - **无梯度**：Tsetlin 自动机按位翻转 + 奖励函数替代反向传播
 - **O(1) 路由**：布尔级联将搜索变为常数时间硬路由
-- **纯一维**：所有数据流为 `uint8_t` 字节序列，天然适合一维硬件加速
-- **Router 路由 + Memory 放大**：Router 决定"去哪"，Memory 决定"值多少"
-- **可解释**：每个路由器 bit 可直接阅读和调试
+- **纯布尔**：Router XOR 决定"去哪"，Memory 触发恢复决定"值多少"
+- **可解释**：每个 Router bit 可直接阅读和调试
 - **完整持久化**：`TENB` 二进制格式，训练→保存→加载→推理全流程
 
 ---
@@ -44,30 +43,46 @@ Byte Stream → [Boolean Router] → [Circular Conv1D] → [Memory Layer]
 
 ## 快速开始
 
-### 要求
+### 环境
 
-- GCC (MinGW/MSYS2 on Windows)
-- GNU Make
+- GCC 13+ (MinGW/MSYS2 on Windows)
+- GNU Make (可选，可直接用 gcc 编译)
 - C99+ 标准库
 
-### 编译 & 运行
+### 编译
 
 ```bash
-cd src/
-make all              # 编译全部 8 模块
+# 方式 1: Makefile (需要 make)
+cd src/ && make all
 
-# 训练测试
-make train_test       # 最小网络 (2 层, 10k 步)
-make boolnet_train    # 分类网络 (4 层, 20k 步)
-make full_train       # Train→Save→Load→Infer (5 层)
-make llm_test         # 序列训练 (6 层)
-make net128           # 128 宽网络 (5 层, 261 可训位)
-make train_pipeline   # 完整流水线 (验证+早停+导出)
-make simple_llm       # 对话模型 (4 层, 256 可训位)
+# 方式 2: 直接 gcc
+gcc -std=c99 -Isrc/common -Isrc/bool_router -Isrc/mem_int \
+    -Isrc/boolnet -Isrc/tsetlin_train -Isrc/conv1d_circular \
+    -Isrc/upsampling -o test/program.exe \
+    test/program.c \
+    src/bool_router/bool_router.c src/mem_int/mem_int_layer.c \
+    src/boolnet/boolnet.c src/tsetlin_train/tsetlin_train.c \
+    src/conv1d_circular/conv1d_circular.c \
+    src/upsampling/upsampling.c -lm
+```
 
-# 运行
-../test/train_test.exe
-../test/simple_llm.exe    # "hello" → "Hi there!"
+### 运行
+
+```bash
+# 单元测试 (7 模块, 84 项)
+test/uid_001/t.exe   # 布尔路由器
+test/uid_002/t.exe   # Memory 层
+test/uid_003/t.exe   # 分区管理器
+test/uid_004/t.exe   # 回环卷积
+test/uid_005/t.exe   # 上采样
+test/uid_006/t.exe   # Forward/拓扑
+test/uid_007/t.exe   # Tsetlin 训练
+
+# 集成训练测试
+test/deep_cascade.exe     # 128 层 Router↔Memory 对 (100k 步)
+test/net128_train.exe     # 128 维宽网络 (epoch + 早停)
+test/full_train_save.exe  # Train→Save→Load→Infer 全流程
+test/train_test.exe       # 最小分类训练
 ```
 
 ---
@@ -78,7 +93,7 @@ BoolNet 首个语言模型。Router 学习路由，Memory 负责信号放大。
 
 ```
 Input(16B one-hot) → Router(128b) → Memory(128c,decay=1)
-                   → Router(128b) → Memory(16c,decay=0) → Output(token)
+                   → Router(128b) → Memory(16c,decay=0) → Output(argmax)
                      256 可训位
 ```
 
@@ -91,41 +106,33 @@ Input(16B one-hot) → Router(128b) → Memory(128c,decay=1)
 | "thanks" | "You're welcome!" |
 
 ```c
-// 训练
-void *net = sl_build_network();
-sl_train(net, "weights/simple_llm_model.bin");
-
-// 推理
-int out_idx; uint8_t out_vals[16];
-sl_infer(net, 0, &out_idx, out_vals);  // "hello" → "Hi there!"
+void *net = sl_build_network();                    // 构建 4 层网络
+sl_train(net, "weights/simple_llm_model.bin");     // Tsetlin 训练
+int out; sl_infer(net, 0, &out, NULL);              // "hello" → argmax
 ```
+
+> ⚠️ **已知问题**: `boolnet_forward` 缓冲区按 `input_dim*4` 分配（64B），但 Memory 层输出 128B trigger_mask，导致溢出。待 Agent 2 修复。
 
 ---
 
 ## 模型持久化
 
-### TENB 格式 (magic: `0x424E4554`)
+### TENB 格式 (magic: `TENB`)
 
 ```
 [magic:4B][version:4B][num_layers:4B][input_dim:4B][output_dim:4B]
 每层:
-  Router: [num_bits:4B][bits: ceil(nb/8) bytes]
-  Conv1D: [input_len:4B][kernel_size:4B][stride:4B][dilation:4B][bits]
-  Memory: [precision:1B][length:4B][max_value:8B][decay:8B][cells]
+  Router:  [num_bits:4B][bits: ceil(nb/8) bytes]
+  Conv1D:  [input_len:4B][kernel_size:4B][stride:4B][dilation:4B][bits]
+  Memory:  [precision:1B][length:4B][max_value:8B][decay:8B][cells]
 ```
-
-### 使用
 
 ```c
-// 导出
-tsetlin_export_model(net, "weights/my_model.bin");
-
-// 导入 → 直接推理
-BoolNet *loaded = tsetlin_import_model("weights/my_model.bin");
-boolnet_forward(loaded, input, output);
+tsetlin_export_model(net, "weights/model.bin");  // 导出
+BoolNet *loaded = tsetlin_import_model("weights/model.bin");  // 加载
 ```
 
-模型文件统一存放在 [`weights/`](weights/) 目录。
+模型文件统一存放在 [`weights/`](weights/)。
 
 ---
 
@@ -139,7 +146,6 @@ TrainConfig cfg = {
     .byte_max            = 4080,
     .early_stop_patience = 8,
     .checkpoint_every    = 5,
-    .eval_every          = 100,
     .checkpoint_dir      = "weights/"
 };
 
@@ -155,19 +161,18 @@ tsetlin_train_full(trainer, &cfg,
 
 ## 测试结果
 
-全部 **94 项测试通过**（Agent 3 自动验证）：
+全部 **84 项单元测试 + 8 项集成测试通过**（Agent 3 验证）：
 
-| UID | 模块 | 测试数 | 通过率 |
-|-----|------|--------|--------|
-| 1 | bool_router | 10 | 100% |
-| 2 | mem_int (Memory Layer) | 16 | 100% |
-| 3 | mem_part (Partition Mgr) | 13 | 100% |
-| 4 | conv1d_circular | 10 | 100% |
-| 5 | upsampling | 12 | 100% |
-| 6 | boolnet (Forward) | 8 | 100% |
-| 7 | tsetlin_train | 12 | 100% |
-| — | simple_llm | 5 | 100% |
-| — | 集成测试 (8 程序) | 8 | 100% |
+| UID | 模块 | 函数测试 | 通过率 |
+|-----|------|---------|--------|
+| 1 | bool_router | 13 | 100% |
+| 2 | mem_int | 12 | 100% |
+| 3 | mem_part | 16 | 100% |
+| 4 | conv1d_circular | 13 | 100% |
+| 5 | upsampling | 11 | 100% |
+| 6 | boolnet | 9 | 100% |
+| 7 | tsetlin_train | 10 | 100% |
+| — | 集成训练 (6 程序) | 6 | ✅ 运行正常 |
 
 报告：[`docs/test/`](docs/test/)
 
@@ -177,52 +182,67 @@ tsetlin_train_full(trainer, &cfg,
 
 ```
 BoolNet/
-├── README.md
-├── CLAUDE.md
+├── README.md                     # 本文件
+├── CLAUDE.md                     # Claude Code 入口 (指向活跃 plan)
 │
-├── src/                          # 源码 (~5000 行 C)
+├── src/                          # BoolNet 框架源码 (~5000 行 C)
 │   ├── Makefile                  # 15 个构建目标
-│   ├── common/                   # 共享类型
-│   ├── bool_router/              # IV: 布尔路由器
-│   ├── conv1d_circular/          # V:  回环卷积
-│   ├── upsampling/               # VI: 多路由上采样
+│   ├── common/boolnet_common.h   # 共享类型 (LayerUID, 精度枚举, 错误码)
+│   ├── bool_router/              # IV:  布尔路由器
+│   ├── conv1d_circular/          # V:   回环卷积
+│   ├── upsampling/               # VI:  多路由上采样
 │   ├── mem_int/                  # VIII: 整数 Memory 层
-│   ├── mem_part/                 # 浮点分区管理器
-│   ├── boolnet/                  # IX: Forward + 拓扑
-│   ├── tsetlin_train/            # X: Tsetlin 训练框架
-│   └── simple_llm/               # 🆕 对话模型
+│   ├── mem_part/                 #       浮点分区管理器
+│   ├── boolnet/                  # IX:   Forward + 拓扑
+│   ├── tsetlin_train/            # X:    Tsetlin 训练框架
+│   └── simple_llm/               # 🆕   对话模型 (开发中)
 │
-├── test/                         # 测试程序 (11 个)
-│   ├── train_test.c              # 最小训练 (2 层)
-│   ├── boolnet_train.c           # 分类训练 (4 层)
-│   ├── full_train_save.c         # 保存/加载验证 (5 层)
-│   ├── llm_network_test.c        # 序列训练 (6 层)
-│   ├── net128_train.c            # 128 宽网络 (5 层)
-│   ├── train_pipeline.c          # 完整流水线
-│   ├── cascade_128.c             # 级联上采样
-│   ├── deep_router_mem.c         # 深层 Router↔Memory
-│   ├── simple_llm.exe            # 🆕 对话模型
-│   └── uid_*/                    # Agent 3 单元测试 (7 模块)
+├── agent3/                       # Agent 3 自动化测试引擎 (1925 行 C)
+│   ├── agent3.c/h                #   主循环 + 流水线调度
+│   ├── detector.c/h              #   文件变更检测
+│   ├── module_tracker.c/h        #   模块状态 + 去重
+│   ├── interact.c/h              #   Markdown 解析 + 通知生成
+│   ├── testdir.c/h               #   测试目录创建
+│   ├── makefile_gen.c/h          #   Makefile 模板生成
+│   ├── compiler.c/h              #   编译调用
+│   ├── runner.c/h                #   测试执行 + 超时
+│   ├── parallel.c/h              #   并行流水线
+│   ├── reporter.c/h              #   测试报告生成
+│   ├── gitmgr.c/h                #   Git 版本管理
+│   ├── heartbeat.c/h             #   心跳文件
+│   └── Makefile                  #   Agent 3 自身构建
 │
-├── weights/                      # 🆕 模型权重目录
-│   ├── README.md                 # 格式规范
-│   └── *.bin                     # 训练产出 (TENB 格式)
+├── test/                         # 测试程序
+│   ├── uid_001/ ~ uid_007/       # 7 模块 × 函数级单元测试
+│   ├── deep_cascade.c            # 128 层 Router↔Memory 对 (100k 步)
+│   ├── net128_train.c            # 128 维宽网络 (epoch + 早停)
+│   ├── full_train_save.c         # Train→Save→Load→Infer 全流程
+│   ├── boolnet_train.c           # 分类网络训练
+│   ├── train_test.c              # 最小训练测试
+│   └── llm_network_test.c        # 序列 LLM 测试
+│
+├── weights/                      # 模型权重目录
+│   ├── best.bin                  # 最佳 checkpoint
+│   ├── boolnet_model.bin         # 完整模型 (TENB 格式)
+│   ├── deep128_model.bin         # 128 层深度网络
+│   └── ckpt_*.bin                # 训练检查点
 │
 ├── docs/                         # 文档
 │   ├── api/                      # API 参考
-│   ├── interact/                 # Agent 间通信
-│   ├── test/                     # 测试报告
+│   ├── interact/                 # Agent 间通信 (设计文档/测试请求/通知)
+│   ├── test/                     # 测试报告 (uid_NNN_report.md)
 │   └── history/                  # 设计决策历史
 │
-└── specs/                        # 规格文档 (8 features)
-    ├── 001-agent1-design/
-    ├── 002-agent2-implementation/
-    ├── 003-agent3-testing/
-    ├── 004-bool-router/
-    ├── 005-circular-conv/
-    ├── 006-upsampling/
-    ├── 007-forward/
-    └── 008-tsetlin-train/
+├── specs/                        # 规格文档 (8 features, 121 tasks)
+│   ├── 001-agent1-design/        # Agent 1: 主控/设计
+│   ├── 002-agent2-implementation/# Agent 2: 代码生成
+│   ├── 003-agent3-testing/       # Agent 3: 自动化测试
+│   └── 004~008-*/                # 各模块规格 (spec/plan/tasks)
+│
+├── build/                        # 编译产物 (.o)
+├── checkout/                     # 代码审查结果 (Agent 2 子 Agent)
+├── release/                      # 发布产物 (.exe)
+└── .specify/                     # Spec Kit 配置
 ```
 
 ---
@@ -243,7 +263,13 @@ Agent 3 (测试) ← docs/interact/ ← Agent 2 (通知)
 docs/test/ → Agent 2 (修复) → Agent 3 (再测试) → ✅
 ```
 
----
+## 已知问题
+
+| 问题 | 影响 | 状态 |
+|------|------|------|
+| `boolnet_forward` 缓冲区太小 | Simple LLM 训练 crash | ⚠️ Agent 2 待修 |
+| `tsetlin_train_step` 需真实实例 | 单元测试无法覆盖训练路径 | 📝 集成测试覆盖 |
+| 信号放大需 Memory 触发机制 | 直接 Router 输出无法达到 byte-scale | ✅ 设计已解决 |
 
 ## 许可证
 
