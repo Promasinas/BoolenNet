@@ -243,3 +243,61 @@ int tsetlin_export_model(BoolNet *net, const char *path) {
     }
     fclose(f); return 0;
 }
+
+BoolNet* tsetlin_import_model(const char *path) {
+    if (!path) return NULL;
+    FILE *f = fopen(path, "rb"); if (!f) return NULL;
+
+    uint32_t magic, ver, nl, id, od;
+    if (fread(&magic,4,1,f)!=1 || magic!=0x424E4554) { fclose(f); return NULL; }
+    if (fread(&ver,4,1,f)!=1 || ver!=1)            { fclose(f); return NULL; }
+    if (fread(&nl,4,1,f)!=1 || fread(&id,4,1,f)!=1 || fread(&od,4,1,f)!=1)
+        { fclose(f); return NULL; }
+
+    BoolNet *net = boolnet_create(1, id, nl);
+    if (!net) { fclose(f); return NULL; }
+
+    for (uint32_t i = 0; i < nl; i++) {
+        uint32_t type, uid;
+        if (fread(&type,4,1,f)!=1 || fread(&uid,4,1,f)!=1)
+            { boolnet_destroy(net); fclose(f); return NULL; }
+
+        if (type == LAYER_ROUTER) {
+            uint32_t nb;
+            if (fread(&nb,4,1,f)!=1) { boolnet_destroy(net); fclose(f); return NULL; }
+            uint8_t zb[256]; memset(zb, 0, (nb+7)/8);
+            BoolRouter *r = bool_router_create(uid, nb, zb);
+            if (!r) { boolnet_destroy(net); fclose(f); return NULL; }
+            if (fread(r->bits, 1, (nb+7)/8, f) != (nb+7)/8)
+                { bool_router_destroy(r); boolnet_destroy(net); fclose(f); return NULL; }
+            boolnet_add_layer(net, LAYER_ROUTER, uid, r,
+                bool_router_forward_layer, (int(*)(void*,const char*))bool_router_save);
+
+        } else if (type == LAYER_CONV1D) {
+            uint32_t il, ks, st, di;
+            if (fread(&il,4,1,f)!=1||fread(&ks,4,1,f)!=1||fread(&st,4,1,f)!=1||fread(&di,4,1,f)!=1)
+                { boolnet_destroy(net); fclose(f); return NULL; }
+            Conv1D *c = conv1d_create(uid, il, ks, st, di);
+            if (!c) { boolnet_destroy(net); fclose(f); return NULL; }
+            if (fread(c->kernel_bits, 1, (ks+7)/8, f) != (ks+7)/8)
+                { conv1d_destroy(c); boolnet_destroy(net); fclose(f); return NULL; }
+            boolnet_add_layer(net, LAYER_CONV1D, uid, c,
+                conv1d_forward_layer, (int(*)(void*,const char*))conv1d_save);
+
+        } else if (type == LAYER_MEMORY) {
+            uint8_t prec; uint32_t len; uint64_t mv, decay;
+            if (fread(&prec,1,1,f)!=1||fread(&len,4,1,f)!=1||fread(&mv,8,1,f)!=1||fread(&decay,8,1,f)!=1)
+                { boolnet_destroy(net); fclose(f); return NULL; }
+            MemIntLayer *m = mem_int_create(uid, prec, len, mv, decay);
+            if (!m) { boolnet_destroy(net); fclose(f); return NULL; }
+            static const uint32_t cs[]={1,2,4,8};
+            uint32_t sz = (prec<4)?cs[prec]:1;
+            if (fread(m->cells, sz, len, f) != len)
+                { mem_int_destroy(m); boolnet_destroy(net); fclose(f); return NULL; }
+            boolnet_add_layer(net, LAYER_MEMORY, uid, m,
+                mem_int_forward_layer, (int(*)(void*,const char*))mem_int_save);
+        }
+    }
+    net->num_layers = nl; net->output_dim = od;
+    fclose(f); return net;
+}
