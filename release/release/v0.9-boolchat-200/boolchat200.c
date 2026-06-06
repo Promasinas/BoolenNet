@@ -282,7 +282,7 @@ static int load_w(const char *p, uint8_t (*r)[N]){FILE *f=fopen(p,"rb");if(!f)re
 
 int main(void){
     srand((unsigned)time(NULL));
-    const char *wf="boolchat_weights.bin";
+    const char *wf="release/boolchat_weights.bin";
     uint8_t (*qv)[N]=malloc(N_PAIRS*N),(*routers)[N]=malloc(N_PAIRS*N);
     if(!qv||!routers){printf("malloc failed\n");return 1;}
     for(int i=0;i<N_PAIRS;i++)enc(inputs[i],qv[i]);
