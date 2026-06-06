@@ -3,6 +3,7 @@
 *.obj
 *.exe
 !release/*.exe
+!release/v*/*.exe
 *.dll
 *.a
 *.lib
