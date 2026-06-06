@@ -31,4 +31,7 @@ int          mem_int_verify_roundtrip(const MemIntLayer *layer);
 /* BoolNet layer adaptor: uint8_t[N] input → signal → forward → query → uint8_t[N] output */
 int mem_int_forward_layer(void *inst, const uint8_t *in, uint8_t *out);
 
+/* Output layer adaptor: reads raw cell values (not binary mask) */
+int mem_int_forward_output(void *inst, const uint8_t *in, uint8_t *out);
+
 #endif

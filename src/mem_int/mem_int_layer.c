@@ -92,3 +92,20 @@ int mem_int_forward_layer(void *inst, const uint8_t *in, uint8_t *out)
     free(mask);
     return 0;
 }
+
+/* Output adaptor: reads actual cell values (0-255), not binary trigger mask.
+ * This preserves value differences (e.g. 254 vs 255) for classification. */
+int mem_int_forward_output(void *inst, const uint8_t *in, uint8_t *out)
+{
+    MemIntLayer *l = (MemIntLayer*)inst;
+    if (!l || !in || !out) return -1;
+
+    /* Forward with signal, then read raw cell values */
+    mem_int_forward(l, in);
+
+    for (uint32_t i = 0; i < l->length; i++) {
+        uint64_t v = cell_read(l, i);
+        out[i] = (v > 255) ? 255 : (uint8_t)v;
+    }
+    return 0;
+}

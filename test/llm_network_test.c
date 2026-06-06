@@ -77,10 +77,10 @@ int main(void)
     boolnet_add_layer(net, LAYER_ROUTER, 3, r2,
         bool_router_forward_layer, (int(*)(void*,const char*))bool_router_save);
 
-    /* Output memory: decay=0 → persistent trigger */
+    /* Output memory: decay=0, outputs CELL VALUES (not binary mask) */
     MemIntLayer *m2 = mem_int_create(4, ML_PRECISION_UINT8, N_CELLS, 255, 0);
     boolnet_add_layer(net, LAYER_MEMORY, 4, m2,
-        mem_int_forward_layer, (int(*)(void*,const char*))mem_int_save);
+        mem_int_forward_output, (int(*)(void*,const char*))mem_int_save);
 
     printf("Layers: Router(16b)→Mem(2c,d=1)→Router(16b)→Mem(2c,d=0)\n");
     printf("Input: 2-byte tokens, sequence length=2\n\n");
@@ -94,9 +94,10 @@ int main(void)
         {{0x01, 0x00}, {0x00, 0x01}},  /* AB */
         {{0x00, 0x01}, {0x01, 0x00}},  /* BA */
     };
+    /* Targets match cell value scale (0-255), not binary */
     uint8_t targets[N_SEQ][N_CELLS] = {
-        {0x01, 0x00},  /* class 0 */
-        {0x00, 0x01},  /* class 1 */
+        {0xFF, 0x00},  /* class 0: cell0=max, cell1=0 */
+        {0x00, 0xFF},  /* class 1: cell0=0, cell1=max */
     };
 
     printf("Data:\n  AB=[01,00][00,01] → class0 [01,00]\n");
