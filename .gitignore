@@ -20,8 +20,9 @@ Thumbs.db
 # Logs
 *.log
 
-# Model files
+# Model files (except weights/)
 *.bin
+!weights/*.bin
 
 # Environment
 .env*
