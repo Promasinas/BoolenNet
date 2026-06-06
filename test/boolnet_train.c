@@ -135,7 +135,7 @@ int main(void)
         if ((s+1) % 1000 == 0) {
             int acc = evaluate(net, inputs, targets);
             uint32_t st, ac; int32_t br;
-            tsetlin_get_stats(trainer, &st, &ac, &br);
+            { uint32_t _ep; int32_t _bv; tsetlin_get_stats(trainer, &st, &ac, &br, &_ep, &_bv); }
             printf("  Step %5d: acc=%d/%d  accepted=%u  best_r=%d\n",
                    s+1, acc, N_PATTERNS, ac, br);
             if (acc > best_acc) { best_acc = acc; best_step = s+1; }
@@ -162,7 +162,7 @@ int main(void)
     }
 
     uint32_t steps, accepted; int32_t best_r;
-    tsetlin_get_stats(trainer, &steps, &accepted, &best_r);
+    { uint32_t _ep; int32_t _bv; tsetlin_get_stats(trainer, &steps, &accepted, &best_r, &_ep, &_bv); }
 
     /* Get router states */
     BoolRouter *r1 = NULL, *r2 = NULL;

@@ -72,5 +72,19 @@ full_train: all
 		mem_int/mem_int_layer.o boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] full_train_save.exe built"
 
+# ---- 128-Wide Network Training ----
+net128: all
+	$(CC) $(CFLAGS) -I. -o ../test/net128_train.exe ../test/net128_train.c \
+		bool_router/bool_router.o conv1d_circular/conv1d_circular.o \
+		mem_int/mem_int_layer.o boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
+	@echo "[OK] net128_train.exe built"
+
+# ---- Full Training Pipeline ----
+train_pipeline: all
+	$(CC) $(CFLAGS) -I. -o ../test/train_pipeline.exe ../test/train_pipeline.c \
+		bool_router/bool_router.o conv1d_circular/conv1d_circular.o \
+		mem_int/mem_int_layer.o boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
+	@echo "[OK] train_pipeline.exe built"
+
 clean:
 	rm -f mem_int/*.o mem_part/*.o bool_router/*.o conv1d_circular/*.o upsampling/*.o boolnet/*.o tsetlin_train/*.o ../test/llm_network_test.exe

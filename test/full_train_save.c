@@ -137,8 +137,8 @@ int main(void)
                tg[p][0],tg[p][1],tg[p][2],tg[p][3]);
     }
 
-    uint32_t st,ac; int32_t br;
-    tsetlin_get_stats(t, &st, &ac, &br);
+    uint32_t st,ac,ep; int32_t br,bv;
+    tsetlin_get_stats(t, &st, &ac, &br, &ep, &bv);
     printf("\nSteps:%u  Ok:%u (%.1f%%)  BestR:%d  Acc:%d/%d\n",
            st, ac, st?100.0f*ac/st:0, br, acc, N_PATS);
 

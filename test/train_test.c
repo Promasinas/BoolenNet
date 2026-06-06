@@ -63,7 +63,7 @@ int main(void)
 
         if ((s+1) % 1000 == 0) {
             uint32_t st, ac; int32_t br;
-            tsetlin_get_stats(t, &st, &ac, &br);
+            { uint32_t _ep; int32_t _bv; tsetlin_get_stats(t, &st, &ac, &br, &_ep, &_bv); }
             mem_int_reset(m);
             boolnet_forward(net, in, out);
             int ok = !memcmp(out, tg, N);
@@ -81,7 +81,7 @@ int main(void)
            memcmp(out,tg,N)?"NOT LEARNED":"LEARNED!");
 
     uint32_t st, ac; int32_t br;
-    tsetlin_get_stats(t, &st, &ac, &br);
+    { uint32_t _ep; int32_t _bv; tsetlin_get_stats(t, &st, &ac, &br, &_ep, &_bv); }
     printf("Steps:%u  Accepted:%u (%.0f%%)  Best reward:%d\n",
            st, ac, st?100.0f*ac/st:0, br);
     printf("Router bits: [%02X %02X %02X %02X]\n",

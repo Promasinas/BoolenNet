@@ -123,7 +123,7 @@ int main(void)
         if ((s+1) % 3000 == 0) {
             int a = eval(net, seqs, targets, N_SEQ);
             uint32_t st,ac; int32_t br;
-            tsetlin_get_stats(t, &st, &ac, &br);
+            { uint32_t _ep; int32_t _bv; tsetlin_get_stats(t, &st, &ac, &br, &_ep, &_bv); }
             printf("  Step %5d: acc=%d/%d  ok=%u  best_r=%d\n", s+1, a, N_SEQ, ac, br);
             if (a > best) best = a;
         }
@@ -143,7 +143,7 @@ int main(void)
     }
 
     uint32_t st,ac; int32_t br;
-    tsetlin_get_stats(t, &st, &ac, &br);
+    { uint32_t _ep; int32_t _bv; tsetlin_get_stats(t, &st, &ac, &br, &_ep, &_bv); }
     printf("\nSteps:%u  Ok:%u (%.1f%%)  BestR:%d  Acc:%d/%d\n",
            st, ac, st?100.0f*ac/st:0, br, acc, N_SEQ);
     printf("R1: %02X%02X  R2: %02X%02X\n",
