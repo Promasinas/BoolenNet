@@ -112,9 +112,7 @@ int tsetlin_train_step(TsetlinTrainer *t, const uint8_t *input, const uint8_t *t
     }
 
     /* Accept or revert */
-    if (t->step_count < 5)
-        printf('  [DEBUG seq] before=%d after=%d
-', r_before, r_after);
+    /* DEBUG removed — Agent 2 debug printf fixed by Agent 3 */
     t->step_count++;
     if (r_after > r_before) {
         t->accept_count++;
@@ -176,9 +174,7 @@ int tsetlin_train_seq(TsetlinTrainer *t, const uint8_t **tokens, uint32_t seq_le
         r_after -= (d < 0 ? -d : d);
     }
 
-    if (t->step_count < 5)
-        printf('  [DEBUG seq] before=%d after=%d
-', r_before, r_after);
+    /* DEBUG removed — Agent 2 debug printf fixed by Agent 3 */
     t->step_count++;
     if (r_after > r_before) {
         t->accept_count++;
