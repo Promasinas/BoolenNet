@@ -51,12 +51,14 @@ static void reset_mem(BoolNet *n) {
 }
 static int eval_pair(BoolNet *n, int in_idx, int out_idx, int *ok) {
     uint8_t in[V], out[M2];
+    memset(in,0,V); memset(out,0,M2);
     make_onehot(in, in_idx, V, 255);
     reset_mem(n);
-    boolnet_forward(n, in, out);
+    int rc = boolnet_forward(n, in, out);
     int max_pos = 0;
     for (int i = 1; i < M2; i++) if (out[i] > out[max_pos]) max_pos = i;
     *ok = (max_pos == out_idx);
+    (void)rc;
     return max_pos;
 }
 
@@ -197,4 +199,4 @@ int sl_demo(void) {
     return (final_correct >= 3) ? 0 : 1;
 }
 
-int main(void) { return sl_demo(); }
+int main(void) { printf("START\n"); fflush(stdout); int r = sl_demo(); printf("END rc=%d\n", r); return r; }
