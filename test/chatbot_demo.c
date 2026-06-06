@@ -100,10 +100,10 @@ int main(void)
     for (int i = 0; i < N_QA; i++)
         encode(questions[i], qvecs[i]);
 
-    /* 2. 构建训练网络: Router(128b) → Memory(4c) */
+    /* 2. 构建训练网络: Router(N_CELLS*8 bits)→Memory(N_CELLS cells) — 1:1 mapping */
     BoolNet *net = boolnet_create(1, N_BYTES, 2);
-    uint8_t zb[N_BYTES] = {0};
-    BoolRouter *r = bool_router_create(1, N_BYTES*8, zb);
+    uint8_t zb[2] = {0};
+    BoolRouter *r = bool_router_create(1, N_CELLS * 8, zb);
     boolnet_add_layer(net, LAYER_ROUTER, 1, r,
         bool_router_forward_layer, (int(*)(void*,const char*))bool_router_save);
 
@@ -111,7 +111,7 @@ int main(void)
     boolnet_add_layer(net, LAYER_MEMORY, 2, m,
         mem_int_forward_output, (int(*)(void*,const char*))mem_int_save);
 
-    printf("网络: Router(128b)→Memory(4c,output)\n\n");
+    printf("网络: Router(%db)→Memory(%dc,output)\n\n", N_CELLS * 8, N_CELLS);
 
     /* 3. 训练: 每个问题 → 对应答案的 one-hot cell */
     printf("=== 训练 %d 个 Q&A ===\n", N_QA);

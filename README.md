@@ -111,8 +111,6 @@ sl_train(net, "weights/simple_llm_model.bin");     // Tsetlin 训练
 int out; sl_infer(net, 0, &out, NULL);              // "hello" → argmax
 ```
 
-> ⚠️ **已知问题**: `boolnet_forward` 缓冲区按 `input_dim*4` 分配（64B），但 Memory 层输出 128B trigger_mask，导致溢出。待 Agent 2 修复。
-
 ---
 
 ## 模型持久化

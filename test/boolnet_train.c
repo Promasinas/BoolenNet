@@ -30,9 +30,9 @@ static BoolNet* build_network(void)
 {
     BoolNet *net = boolnet_create(1, N_BYTES, 4);
 
-    /* Layer 1: Router (8 bit) — learns input routing */
-    uint8_t r1_bits[1] = {0x00};
-    BoolRouter *r1 = bool_router_create(1, 8, r1_bits);
+    /* Layer 1: Router (N_BYTES*8 bits) — learns input routing */
+    uint8_t r1_bits[4] = {0};
+    BoolRouter *r1 = bool_router_create(1, N_BYTES * 8, r1_bits);
     boolnet_add_layer(net, LAYER_ROUTER, 1, r1,
         bool_router_forward_layer, (int(*)(void*,const char*))bool_router_save);
 
@@ -41,9 +41,9 @@ static BoolNet* build_network(void)
     boolnet_add_layer(net, LAYER_MEMORY, 2, m1,
         mem_int_forward_layer, (int(*)(void*,const char*))mem_int_save);
 
-    /* Layer 3: Router (8 bit) — learns output routing */
-    uint8_t r2_bits[1] = {0x00};
-    BoolRouter *r2 = bool_router_create(3, 8, r2_bits);
+    /* Layer 3: Router (N_CELLS*8 bits) — learns output routing */
+    uint8_t r2_bits[4] = {0};
+    BoolRouter *r2 = bool_router_create(3, N_CELLS * 8, r2_bits);
     boolnet_add_layer(net, LAYER_ROUTER, 3, r2,
         bool_router_forward_layer, (int(*)(void*,const char*))bool_router_save);
 

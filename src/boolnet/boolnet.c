@@ -54,10 +54,28 @@ int boolnet_forward(BoolNet *n, const uint8_t *input, uint8_t *output)
         return 0;
     }
 
-    /* Double-buffer for layer-to-layer propagation */
+    /* Compute max buffer size: walk layers to find largest output */
+    uint32_t max_dim = n->input_dim;
+    for (uint32_t i = 0; i < n->num_layers; i++) {
+        uint32_t ld = n->input_dim * 8;  /* default: assume expansion possible */
+        if (n->layers[i].type == LAYER_UPSAMPLE) {
+            UpsampleLayer *u = (UpsampleLayer*)n->layers[i].instance;
+            ld = u->num_routers * u->input_length;
+        } else if (n->layers[i].type == LAYER_MEMORY) {
+            MemIntLayer *m = (MemIntLayer*)n->layers[i].instance;
+            ld = m->length;
+        } else if (n->layers[i].type == LAYER_CONV1D) {
+            Conv1D *c = (Conv1D*)n->layers[i].instance;
+            ld = (c->input_length + c->stride - 1) / c->stride;
+        }
+        if (ld > max_dim) max_dim = ld;
+    }
+    /* Safety margin: at least input_dim*16 to cover router bit→byte expansion */
+    if (max_dim < n->input_dim * 16) max_dim = n->input_dim * 16;
+
     uint8_t *buf[2];
-    buf[0] = (uint8_t*)malloc(n->input_dim * 4);
-    buf[1] = (uint8_t*)malloc(n->input_dim * 4);
+    buf[0] = (uint8_t*)malloc(max_dim);
+    buf[1] = (uint8_t*)malloc(max_dim);
     if (!buf[0] || !buf[1]) { free(buf[0]); free(buf[1]); return -2; }
 
     memcpy(buf[0], input, n->input_dim);
