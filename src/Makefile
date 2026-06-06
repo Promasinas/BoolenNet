@@ -86,5 +86,12 @@ train_pipeline: all
 		mem_int/mem_int_layer.o boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] train_pipeline.exe built"
 
+# ---- Simple LLM (Dialogue Model) ----
+simple_llm: bool_router mem_int boolnet tsetlin
+	$(CC) $(CFLAGS) -I. -o ../test/simple_llm.exe simple_llm/simple_llm.c \
+		bool_router/bool_router.o mem_int/mem_int_layer.o \
+		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
+	@echo "[OK] simple_llm.exe built"
+
 clean:
 	rm -f mem_int/*.o mem_part/*.o bool_router/*.o conv1d_circular/*.o upsampling/*.o boolnet/*.o tsetlin_train/*.o ../test/llm_network_test.exe
