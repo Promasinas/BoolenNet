@@ -100,6 +100,19 @@ chatbot: bool_router mem_int boolnet tsetlin
 		boolnet/boolnet.o tsetlin_train/tsetlin_train.o -lm
 	@echo "[OK] release/chatbot.exe built"
 
+# ---- Coordinate Descent (deterministic optimizer) ----
+coord_descent: bool_router mem_int boolnet
+	$(CC) $(CFLAGS) -c -o tsetlin_train/coord_descent.o tsetlin_train/coord_descent.c
+	@echo "[OK] coord_descent.o built"
+
+# ---- Coordinate Descent Demo ----
+coord_demo: bool_router mem_int boolnet coord_descent
+	$(CC) $(CFLAGS) -I. -o ../build/coord_descent_demo.exe ../test/coord_descent_demo.c \
+		bool_router/bool_router.o mem_int/mem_int_layer.o \
+		boolnet/boolnet.o tsetlin_train/tsetlin_train.o \
+		tsetlin_train/coord_descent.o -lm
+	@echo "[OK] coord_descent_demo.exe built"
+
 # ---- Cascade Tree Chatbot (standalone) ----
 chatbot_cascade:
 	gcc -std=c99 -O2 -o ../release/chatbot_cascade.exe ../release/chatbot_cascade.c -lm
